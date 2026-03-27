@@ -16,20 +16,16 @@ const allowedOrigins = [
 
 app.use(
     cors({
-        origin: function (origin, callback) {
-            // Permitir peticiones sin origen (como Postman o apps móviles)
-            if (!origin) return callback(null, true);
-
-            if (allowedOrigins.indexOf(origin) === -1) {
-                const msg =
-                    "El policy de CORS para este sitio no permite acceso desde el origen especificado.";
-                return callback(new Error(msg), false);
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error("No permitido por CORS"));
             }
-            return callback(null, true);
         },
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
-        credentials: true, // Vital si usas cookies o sesiones
+        credentials: true,
     }),
 );
 app.use(express.json()); // Para poder leer JSON en el body de las peticiones
