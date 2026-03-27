@@ -28,12 +28,14 @@ app.use(
         credentials: true,
     }),
 );
+
 app.use(express.json()); // Para poder leer JSON en el body de las peticiones
 
 // Prueba de vida para Vercel
 app.get("/", (req, res) => {
     res.send("API de Condominios: El servidor está vivo y funcionando 🚀");
 });
+
 // Usar el enrutador principal y prefijar todas las rutas con /api
 app.use("/api", apiRoutes);
 
@@ -42,8 +44,11 @@ app.use((req, res) => {
     res.status(404).json({ message: "Ruta no encontrada" });
 });
 
-// Arrancar el servidor
+// Arrancar el servidor para desarrollo local
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
+
+// EXPORTACIÓN OBLIGATORIA PARA VERCEL
+module.exports = app;
