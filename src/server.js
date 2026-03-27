@@ -24,7 +24,7 @@ app.use(
                 callback(new Error("No permitido por CORS"));
             }
         },
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
     }),
