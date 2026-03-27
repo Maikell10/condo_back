@@ -1,0 +1,3 @@
+ON DELETE CASCADE vs SET NULL: Si eliminas un edificio, sus apartamentos y recibos se borran en cascada para no dejar basura. Pero si eliminas un usuario (propietario), el apartamento no se borra, simplemente su campo owner_id queda en NULL para que puedas asignarle un dueño nuevo.
+
+status en Pagos: Fíjate que por defecto un pago entra como PENDING_APPROVAL. Así, cuando el administrador lo revise en su panel y confirme que el dinero cayó en el banco, lo pasa a APPROVED.
