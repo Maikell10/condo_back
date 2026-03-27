@@ -32,6 +32,10 @@ app.use(express.json()); // Para poder leer JSON en el body de las peticiones
 // Manejo manual de preflight para Vercel
 app.options("*", cors());
 
+// Prueba de vida para Vercel
+app.get("/", (req, res) => {
+    res.send("API de Condominios: El servidor está vivo y funcionando 🚀");
+});
 // Usar el enrutador principal y prefijar todas las rutas con /api
 app.use("/api", apiRoutes);
 
