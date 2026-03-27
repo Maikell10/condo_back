@@ -46,12 +46,12 @@ app.use((req, res) => {
 
 // Arrancar el servidor para desarrollo local
 // Arrancar el servidor SOLO en local
-if (process.env.NODE_ENV !== "production") {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    });
-}
+// if (process.env.NODE_ENV !== "production") {
+//     const PORT = process.env.PORT || 3000;
+//     app.listen(PORT, () => {
+//         console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+//     });
+// }
 
 // EXPORTACIÓN OBLIGATORIA PARA VERCEL
 module.exports = app;
