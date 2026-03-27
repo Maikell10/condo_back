@@ -11,7 +11,7 @@ const app = express();
 // Lista blanca de dominios permitidos
 const allowedOrigins = [
     "http://localhost:4200", // Tu Angular local
-    "http://169.197.143.232:10001/", // Tu frontend en producción
+    "http://169.197.143.232:10001", // Tu frontend en producción
 ];
 
 app.use(
@@ -29,8 +29,6 @@ app.use(
     }),
 );
 app.use(express.json()); // Para poder leer JSON en el body de las peticiones
-// Manejo manual de preflight para Vercel
-app.options("*", cors());
 
 // Prueba de vida para Vercel
 app.get("/", (req, res) => {
