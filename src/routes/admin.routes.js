@@ -9,6 +9,18 @@ router.get(
     authMiddleware.isSuperAdmin,
     adminController.getAllUsers,
 );
+router.post(
+    "/users",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.createUser,
+);
+router.put(
+    "/users/:id",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.updateUser,
+);
 router.patch(
     "/users/:id/status",
     authMiddleware.verifyToken,
@@ -22,11 +34,37 @@ router.get(
     authMiddleware.isSuperAdmin,
     adminController.getBuildings,
 );
+router.post(
+    "/buildings",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.createBuilding,
+);
+router.put(
+    "/buildings/:id",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.updateBuilding,
+);
 router.patch(
     "/buildings/:id/status",
     authMiddleware.verifyToken,
     authMiddleware.isSuperAdmin,
     adminController.toggleBuildingStatus,
+);
+
+router.patch(
+    "/buildings/:id/admin",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.assignBuildingAdmin,
+);
+
+router.get(
+    "/dashboard-stats",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.getDashboardStats,
 );
 
 module.exports = router;
