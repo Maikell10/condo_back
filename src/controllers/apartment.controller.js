@@ -83,9 +83,127 @@ const createApartment = async (req, res) => {
     }
 };
 
+// Obtener todas las cuentas de un edificio
+const getBankAccounts = async (req, res) => {
+    const { buildingId } = req.params;
+    try {
+        const [accounts] = await db.query(
+            "SELECT * FROM bank_accounts WHERE building_id = ? ORDER BY id DESC",
+            [buildingId],
+        );
+        res.json({ data: accounts });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Error al obtener las cuentas bancarias",
+        });
+    }
+};
+
+// Crear una nueva cuenta
+const createBankAccount = async (req, res) => {
+    const {
+        building_id,
+        bank_name,
+        account_number,
+        account_type,
+        holder_name,
+        holder_id,
+    } = req.body;
+
+    if (
+        !building_id ||
+        !bank_name ||
+        !account_number ||
+        !holder_name ||
+        !holder_id
+    ) {
+        return res.status(400).json({ message: "Faltan campos obligatorios" });
+    }
+
+    try {
+        const query = `
+            INSERT INTO bank_accounts 
+            (building_id, bank_name, account_number, account_type, holder_name, holder_id) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const [result] = await db.query(query, [
+            building_id,
+            bank_name,
+            account_number,
+            account_type || "CORRIENTE",
+            holder_name,
+            holder_id,
+        ]);
+
+        res.status(201).json({
+            message: "Cuenta bancaria registrada exitosamente",
+            id: result.insertId,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error al registrar la cuenta" });
+    }
+};
+
+// Editar una cuenta existente
+const updateBankAccount = async (req, res) => {
+    const { id } = req.params;
+    const {
+        bank_name,
+        account_number,
+        account_type,
+        holder_name,
+        holder_id,
+        status,
+    } = req.body;
+
+    try {
+        const query = `
+            UPDATE bank_accounts 
+            SET bank_name = ?, account_number = ?, account_type = ?, holder_name = ?, holder_id = ?, status = ?
+            WHERE id = ?
+        `;
+        await db.query(query, [
+            bank_name,
+            account_number,
+            account_type,
+            holder_name,
+            holder_id,
+            status,
+            id,
+        ]);
+
+        res.json({ message: "Cuenta bancaria actualizada correctamente" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error al actualizar la cuenta" });
+    }
+};
+
+// Eliminar (o desactivar) una cuenta
+const deleteBankAccount = async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Opción A: Borrado físico (Si prefieres borrado lógico, usa un UPDATE status = 'INACTIVE')
+        await db.query("DELETE FROM bank_accounts WHERE id = ?", [id]);
+        res.json({ message: "Cuenta bancaria eliminada" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message:
+                "Error al eliminar la cuenta. Verifica que no tenga pagos asociados.",
+        });
+    }
+};
+
 module.exports = {
     getApartmentsByBuilding,
     updateAlicuota,
     linkOwner,
     createApartment,
+    getBankAccounts,
+    createBankAccount,
+    updateBankAccount,
+    deleteBankAccount,
 };
