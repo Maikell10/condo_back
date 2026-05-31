@@ -83,6 +83,59 @@ const login = async (req, res) => {
     }
 };
 
+const ownerLogin = async (req, res) => {
+    const { accessCode } = req.body;
+
+    try {
+        // 1. Buscamos el apartamento por código y cruzamos (JOIN) con la tabla users
+        // para obtener los datos del propietario y su contraseña.
+        const [rows] = await db.query(
+            `SELECT a.id as apt_id, a.number, a.building_id, u.id as user_id, u.name, u.role, u.password 
+             FROM apartments a 
+             INNER JOIN users u ON a.owner_id = u.id 
+             WHERE a.access_code = ?`,
+            [accessCode],
+        );
+
+        // Si no hay resultados, el código no existe o el apartamento aún no tiene dueño asignado
+        if (rows.length === 0) {
+            return res.status(401).json({
+                message:
+                    "Código de acceso inválido o apartamento sin propietario asignado.",
+            });
+        }
+
+        const user = rows[0];
+
+        // 3. Generamos el JWT inyectando los datos cruciales del propietario
+        const token = jwt.sign(
+            {
+                id: user.user_id,
+                role: user.role, // Será 'OWNER'
+                apartmentId: user.apt_id,
+                buildingId: user.building_id,
+                unit: user.number,
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "8h" },
+        );
+
+        // 4. Respondemos con el token y datos básicos
+        res.json({
+            token,
+            role: user.role,
+            name: user.name,
+            unit: user.number,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Error en el servidor al intentar iniciar sesión.",
+        });
+    }
+};
+
 module.exports = {
     login,
+    ownerLogin,
 };

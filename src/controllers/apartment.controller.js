@@ -1,4 +1,5 @@
 const db = require("../db");
+const crypto = require("crypto");
 
 const getApartmentsByBuilding = async (req, res) => {
     const { buildingId } = req.params;
@@ -66,13 +67,17 @@ const createApartment = async (req, res) => {
                 .json({ message: "La alícuota debe ser un número positivo." });
         }
 
+        // Generar un código alfanumérico único de 8 caracteres
+        const accessCode = crypto.randomBytes(4).toString("hex").toUpperCase();
+
         await db.query(
-            "INSERT INTO apartments (number, alicuota, building_id) VALUES (?, ?, ?)",
-            [number, alicuota, buildingId],
+            "INSERT INTO apartments (number, alicuota, building_id, access_code) VALUES (?, ?, ?, ?)",
+            [number, alicuota, buildingId, accessCode],
         );
 
         res.status(201).json({
             message: "Apartamento creado exitosamente en el sistema.",
+            access_code: accessCode,
         });
     } catch (error) {
         console.error(error);

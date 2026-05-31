@@ -6,3 +6,24 @@ status en Pagos: Fíjate que por defecto un pago entra como PENDING_APPROVAL. As
 git add .
 git commit -m "update method cors"
 git push -u origin main
+
+
+https://vercel.com/maikellods10s-projects/condo-front
+https://condo-front-seven.vercel.app/
+https://condoback.vercel.app/
+
+
+800 para correo
+
+Gmail (Cuenta personal): Es la alternativa directa más común. Permite enviar hasta 500 correos al día de forma gratuita. Con este límite diario, podrías cubrir tus 800 correos mensuales en poco más de día y medio. Para usarlo con Nodemailer, solo requieres configurar una Contraseña de Aplicación de Google en tu cuenta.
+
+Encuestas Comunidad : para llevar a cabo temas a aprobar por la comunidad
+
+-en vista de propietario se coloca solo num de apto para morosos o pendientes
+
+
+-En admin agregar el monto a cobrar a cada edificio
+
+-agregar campo libre q se vaya guardando en gastos
+
+-Agregar tipo conjunto de edificio en donde un administrador de edificio puede llevar n edificios y puede cargar gastos induviduales a cada uno fuera de los comunes

@@ -5,6 +5,8 @@ const authController = require("../controllers/auth.controller");
 // La ruta final será: /api/auth/login
 router.post("/login", authController.login);
 
+router.post("/login/owner", authController.ownerLogin);
+
 // Aquí a futuro puedes agregar:
 // router.post('/register', authController.register);
 // router.post('/forgot-password', authController.forgotPassword);
