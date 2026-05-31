@@ -29,11 +29,33 @@ const login = async (req, res) => {
         let extraData = {};
 
         if (user.role === "BUILDING_ADMIN") {
+            // const [buildings] = await db.query(
+            //     "SELECT id as buildingId FROM buildings WHERE admin_id = ?",
+            //     [user.id],
+            // );
+            // if (buildings.length > 0) extraData = buildings[0];
+
+            // 🔥 CORRECCIÓN: Buscamos directamente TODOS los edificios que administra.
+            // Ya sea porque es el admin directo del edificio (b.admin_id)
+            // o porque es el admin del conjunto al que pertenece el edificio (rc.admin_id)
             const [buildings] = await db.query(
-                "SELECT id as buildingId FROM buildings WHERE admin_id = ?",
-                [user.id],
+                `SELECT b.id as buildingId, b.complex_id 
+                 FROM buildings b 
+                 LEFT JOIN residential_complexes rc ON b.complex_id = rc.id 
+                 WHERE (b.admin_id = ? OR rc.admin_id = ?) AND b.status = 'ACTIVE'`,
+                [user.id, user.id],
             );
-            if (buildings.length > 0) extraData = buildings[0];
+
+            if (buildings.length > 0) {
+                // Siempre asignamos el primer edificio por defecto para que el Dashboard cargue algo
+                extraData.buildingId = buildings[0].buildingId;
+
+                // Si la consulta arroja MÁS de 1 edificio, le avisamos al frontend
+                // enviando el complexId, lo que detonará la aparición del selector.
+                if (buildings.length > 1) {
+                    extraData.complexId = buildings[0].complex_id;
+                }
+            }
         } else if (user.role === "OWNER") {
             const [apartments] = await db.query(
                 `
