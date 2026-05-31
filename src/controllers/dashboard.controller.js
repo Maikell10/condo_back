@@ -5,7 +5,7 @@ const getDashboardStats = async (req, res) => {
     try {
         // 1. Datos del Edificio
         const [building] = await db.query(
-            "SELECT name, code FROM buildings WHERE id = ?",
+            "SELECT name, code, complex_id FROM buildings WHERE id = ?",
             [buildingId],
         );
 
