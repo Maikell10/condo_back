@@ -86,6 +86,12 @@ const login = async (req, res) => {
 const ownerLogin = async (req, res) => {
     const { accessCode } = req.body;
 
+    if (!accessCode) {
+        return res
+            .status(400)
+            .json({ message: "El código de acceso es obligatorio." });
+    }
+
     try {
         // 1. Buscamos el apartamento por código y cruzamos (JOIN) con la tabla users
         // para obtener los datos del propietario y su contraseña.
@@ -122,10 +128,16 @@ const ownerLogin = async (req, res) => {
 
         // 4. Respondemos con el token y datos básicos
         res.json({
+            message: "Login de propietario exitoso",
             token,
-            role: user.role,
-            name: user.name,
-            unit: user.number,
+            user: {
+                id: user.user_id.toString(),
+                name: user.name,
+                role: user.role,
+                apartmentId: user.apt_id,
+                buildingId: user.building_id,
+                unit: user.number,
+            },
         });
     } catch (error) {
         console.error(error);
