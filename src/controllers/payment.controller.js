@@ -59,7 +59,7 @@ const getMyPayments = async (req, res) => {
         const query = `
             SELECT id, bank_account, reference, amount, payment_date, status 
             FROM payments 
-            WHERE apartment_id = (SELECT id FROM apartments WHERE owner_id = ?)
+            WHERE apartment_id IN (SELECT id FROM apartments WHERE owner_id = ?)
             ORDER BY created_at DESC LIMIT 5
         `;
         const [payments] = await db.query(query, [userId]);
