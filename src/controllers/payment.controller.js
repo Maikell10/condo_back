@@ -57,10 +57,19 @@ const getMyPayments = async (req, res) => {
     const userId = req.user.id;
     try {
         const query = `
-            SELECT id, bank_account, reference, amount, payment_date, status 
-            FROM payments 
-            WHERE apartment_id IN (SELECT id FROM apartments WHERE owner_id = ?)
-            ORDER BY created_at DESC LIMIT 5
+        SELECT 
+            p.id, 
+            p.bank_account, 
+            p.reference, 
+            p.amount, 
+            p.payment_date, 
+            p.status,
+            a.number as apartment_number
+        FROM payments p
+        JOIN apartments a ON p.apartment_id = a.id
+        WHERE a.owner_id = ?
+        ORDER BY p.created_at DESC 
+        LIMIT 5
         `;
         const [payments] = await db.query(query, [userId]);
         res.json({ data: payments });
@@ -74,12 +83,22 @@ const getBuildingPayments = async (req, res) => {
     const adminId = req.user.id;
     try {
         const query = `
-            SELECT p.id, a.number as apartment, u.name as ownerName, 
-                   p.amount, p.payment_date as date, p.status, p.bank_account as method, p.reference
+            SELECT 
+                p.id, 
+                a.number as apartment, 
+                u.name as ownerName, 
+                p.amount, 
+                DATE_FORMAT(p.payment_date, '%Y-%m-%d') as date, 
+                p.status, 
+                p.bank_account as method, 
+                p.reference,
+                b.name as buildingName 
             FROM payments p
             JOIN apartments a ON p.apartment_id = a.id
             JOIN users u ON a.owner_id = u.id
-            WHERE a.building_id = (SELECT id FROM buildings WHERE admin_id = ?)
+            JOIN buildings b ON a.building_id = b.id
+            LEFT JOIN residential_complexes rc ON b.complex_id = rc.id
+            WHERE b.admin_id = ? OR rc.admin_id = ?
             ORDER BY p.created_at DESC
         `;
         const [payments] = await db.query(query, [adminId]);
