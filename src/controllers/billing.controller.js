@@ -94,49 +94,80 @@ const generateMonthlyBilling = async (req, res) => {
 
 // Obtener gastos del mes en curso para el edificio
 const getBuildingExpenses = async (req, res) => {
+    // buildingId puede ser un número (ej. 1) o el texto 'ALL'
     const { buildingId } = req.params;
-    const { month, year } = req.query;
+    const { month, year, complexId } = req.query;
 
     try {
-        // 1. Consultar los gastos
-        const expensesQuery = `
-            SELECT be.id, ec.code, ec.description as provider, be.amount, 
-                   DATE_FORMAT(be.expense_date, '%Y-%m-%d') as date, 'Variable' as type
-            FROM building_expenses be
-            JOIN expense_concepts ec ON be.concept_id = ec.id
-            WHERE be.building_id = ? AND MONTH(be.expense_date) = ? AND YEAR(be.expense_date) = ?
-        `;
-        const [expenses] = await db.query(expensesQuery, [
-            buildingId,
-            month,
-            year,
-        ]);
+        if (buildingId === "ALL") {
+            // 1. VISTA GLOBAL: Traer todos los gastos de todos los edificios del conjunto
+            const expensesQuery = `
+                SELECT be.id, ec.code, ec.description as provider, be.amount, 
+                       DATE_FORMAT(be.expense_date, '%Y-%m-%d') as date, 'Variable' as type,
+                       b.name as buildingName
+                FROM building_expenses be
+                JOIN expense_concepts ec ON be.concept_id = ec.id
+                JOIN buildings b ON be.building_id = b.id
+                WHERE b.complex_id = ? AND MONTH(be.expense_date) = ? AND YEAR(be.expense_date) = ?
+                ORDER BY be.expense_date DESC
+            `;
+            const [expenses] = await db.query(expensesQuery, [
+                complexId,
+                month,
+                year,
+            ]);
 
-        // 2. Verificar si este periodo ya está cerrado en la nueva tabla
-        const [period] = await db.query(
-            "SELECT status FROM billing_periods WHERE building_id = ? AND month = ? AND year = ?",
-            [buildingId, month, year],
-        );
+            // En la vista global no hay "estado del mes" porque el cierre es por torre individual
+            res.json({
+                data: expenses,
+                status: "OPEN",
+                canClose: false, // Bloqueado por seguridad
+            });
+        } else {
+            // 2. VISTA INDIVIDUAL: Lógica original para un solo edificio
+            const expensesQuery = `
+                SELECT be.id, ec.code, ec.description as provider, be.amount, 
+                       DATE_FORMAT(be.expense_date, '%Y-%m-%d') as date, 'Variable' as type
+                FROM building_expenses be
+                JOIN expense_concepts ec ON be.concept_id = ec.id
+                WHERE be.building_id = ? AND MONTH(be.expense_date) = ? AND YEAR(be.expense_date) = ?
+                ORDER BY be.expense_date DESC
+            `;
+            const [expenses] = await db.query(expensesQuery, [
+                buildingId,
+                month,
+                year,
+            ]);
 
-        // 3. Verificar si existen meses anteriores sin cerrar (Lógica de "El más antiguo")
-        const [olderPending] = await db.query(
-            `
-            SELECT 1 FROM building_expenses 
-            WHERE building_id = ? AND expense_date < STR_TO_DATE(?, '%Y-%m-%d')
-            AND CONCAT(MONTH(expense_date), '-', YEAR(expense_date)) NOT IN (
-                SELECT CONCAT(month, '-', year) FROM billing_periods WHERE building_id = ?
-            ) LIMIT 1
-        `,
-            [buildingId, `${year}-${month}-01`, buildingId],
-        );
+            // Verificar si este periodo ya está cerrado en la nueva tabla
+            const [period] = await db.query(
+                "SELECT status FROM billing_periods WHERE building_id = ? AND month = ? AND year = ?",
+                [buildingId, month, year],
+            );
 
-        res.json({
-            data: expenses,
-            status: period.length > 0 ? "CLOSED" : "OPEN",
-            canClose: period.length === 0 && olderPending.length === 0, // Solo si es el más viejo
-        });
+            // Verificar si existen meses anteriores sin cerrar
+            const [olderPending] = await db.query(
+                `
+                SELECT 1 FROM building_expenses 
+                WHERE building_id = ? AND expense_date < STR_TO_DATE(?, '%Y-%m-%d')
+                AND CONCAT(MONTH(expense_date), '-', YEAR(expense_date)) NOT IN (
+                    SELECT CONCAT(month, '-', year) FROM billing_periods WHERE building_id = ?
+                ) LIMIT 1
+                `,
+                [buildingId, `${year}-${month}-01`, buildingId],
+            );
+
+            res.json({
+                data: expenses,
+                status: period.length > 0 ? "CLOSED" : "OPEN",
+                canClose: period.length === 0 && olderPending.length === 0,
+            });
+        }
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener datos" });
+        console.error("Error en getBuildingExpenses:", error);
+        res.status(500).json({
+            message: "Error al obtener datos de facturación",
+        });
     }
 };
 
@@ -154,12 +185,9 @@ const addExpense = async (req, res) => {
             );
 
             if (buildings.length === 0) {
-                return res
-                    .status(400)
-                    .json({
-                        message:
-                            "No hay edificios registrados en este conjunto.",
-                    });
+                return res.status(400).json({
+                    message: "No hay edificios registrados en este conjunto.",
+                });
             }
 
             // 2. Prorrateamos (dividimos) el monto total entre la cantidad de edificios
