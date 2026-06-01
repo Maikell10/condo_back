@@ -29,7 +29,7 @@ const getBuildingsByComplex = async (req, res) => {
 };
 
 const importComplexData = async (req, res) => {
-    const complexId = 2;
+    const complexId = 2; // El ID de tu conjunto residencial
 
     if (!req.file) {
         return res
@@ -39,9 +39,9 @@ const importComplexData = async (req, res) => {
 
     const results = [];
 
-    // 🔥 CORRECCIÓN: Leer desde la memoria (buffer) en lugar del disco (path)
+    // 🔥 CORRECCIÓN 1: Le indicamos al parser que el separador es el punto y coma (;)
     Readable.from(req.file.buffer)
-        .pipe(csv())
+        .pipe(csv({ separator: ";" }))
         .on("data", (data) => results.push(data))
         .on("end", async () => {
             const connection = await db.getConnection();
@@ -57,14 +57,12 @@ const importComplexData = async (req, res) => {
                     const ownerName = row["Nombre Propietario"]?.trim();
                     let email = row["email"]?.trim() || null;
 
-                    const rawAlicuota = row["alicuota"]?.trim();
-                    const alicuota = rawAlicuota
-                        ? parseFloat(rawAlicuota)
-                        : 0.0;
-
+                    // Si la fila no tiene edificio o apartamento, la ignoramos
                     if (!buildingName || !aptNumber) continue;
 
+                    // ============================================
                     // 1. EDIFICIOS
+                    // ============================================
                     if (!buildingMap[buildingName]) {
                         const randomHex = crypto
                             .randomBytes(2)
@@ -80,7 +78,9 @@ const importComplexData = async (req, res) => {
                     }
                     const currentBuildingId = buildingMap[buildingName];
 
+                    // ============================================
                     // 2. PROPIETARIO
+                    // ============================================
                     let ownerId = null;
                     if (ownerName) {
                         if (email) {
@@ -101,27 +101,50 @@ const importComplexData = async (req, res) => {
                         }
                     }
 
-                    // 3. APARTAMENTO
+                    // ============================================
+                    // 3. APARTAMENTO (Se inserta con alícuota 0 por ahora)
+                    // ============================================
                     const accessCode = crypto
                         .randomBytes(4)
                         .toString("hex")
                         .toUpperCase();
                     await connection.query(
-                        `INSERT INTO apartments (building_id, owner_id, number, access_code, alicuota) VALUES (?, ?, ?, ?, ?)`,
-                        [
-                            currentBuildingId,
-                            ownerId,
-                            aptNumber,
-                            accessCode,
-                            alicuota,
-                        ],
+                        `INSERT INTO apartments (building_id, owner_id, number, access_code, alicuota) VALUES (?, ?, ?, ?, 0)`,
+                        [currentBuildingId, ownerId, aptNumber, accessCode],
                     );
                 }
 
+                // ============================================
+                // 🔥 CORRECCIÓN 2: CALCULAR ALÍCUOTAS EN PARTES IGUALES
+                // ============================================
+                const buildingIds = Object.values(buildingMap);
+
+                for (const bId of buildingIds) {
+                    // Contamos cuántos apartamentos se insertaron en este edificio
+                    const [aptCountRes] = await connection.query(
+                        `SELECT COUNT(id) as total FROM apartments WHERE building_id = ?`,
+                        [bId],
+                    );
+                    const totalApts = aptCountRes[0].total;
+
+                    if (totalApts > 0) {
+                        // Calculamos la fracción (Ej: Si hay 20 apts, 1 / 20 = 0.0500)
+                        const alicuotaEquitativa = (1 / totalApts).toFixed(6);
+
+                        // Actualizamos todos los apartamentos de ese edificio con su porción igualitaria
+                        await connection.query(
+                            `UPDATE apartments SET alicuota = ? WHERE building_id = ?`,
+                            [alicuotaEquitativa, bId],
+                        );
+                    }
+                }
+
                 await connection.commit();
+
                 res.status(201).json({
-                    message: "Data importada exitosamente.",
-                    edificiosCreados: Object.keys(buildingMap).length,
+                    message:
+                        "Data importada y alícuotas calculadas exitosamente.",
+                    edificiosCreados: buildingIds.length,
                 });
             } catch (error) {
                 await connection.rollback();
@@ -131,7 +154,6 @@ const importComplexData = async (req, res) => {
                 });
             } finally {
                 connection.release();
-                // 🔥 CORRECCIÓN: Ya no necesitamos usar fs.unlinkSync porque el archivo nunca tocó el disco duro.
             }
         });
 };
