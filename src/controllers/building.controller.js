@@ -29,18 +29,19 @@ const getBuildingsByComplex = async (req, res) => {
 };
 
 const importComplexData = async (req, res) => {
-    const complexId = 2; // El ID de tu conjunto residencial
+    const complexId = 2;
 
     if (!req.file) {
         return res
             .status(400)
-            .json({ message: "No se proporcionó ningún archivo CSV." });
+            .json({ message: "No se proporcionó ningún archivo." });
     }
 
     const results = [];
 
-    // 🔥 CORRECCIÓN 1: Le indicamos al parser que el separador es el punto y coma (;)
-    Readable.from(req.file.buffer)
+    // 🔥 EL FIX MÁGICO: Envolver req.file.buffer en corchetes [ ]
+    Readable.from([req.file.buffer])
+        // Le decimos que el separador es ';' (según tu último archivo)
         .pipe(csv({ separator: ";" }))
         .on("data", (data) => results.push(data))
         .on("end", async () => {
@@ -57,12 +58,9 @@ const importComplexData = async (req, res) => {
                     const ownerName = row["Nombre Propietario"]?.trim();
                     let email = row["email"]?.trim() || null;
 
-                    // Si la fila no tiene edificio o apartamento, la ignoramos
                     if (!buildingName || !aptNumber) continue;
 
-                    // ============================================
                     // 1. EDIFICIOS
-                    // ============================================
                     if (!buildingMap[buildingName]) {
                         const randomHex = crypto
                             .randomBytes(2)
@@ -78,9 +76,7 @@ const importComplexData = async (req, res) => {
                     }
                     const currentBuildingId = buildingMap[buildingName];
 
-                    // ============================================
                     // 2. PROPIETARIO
-                    // ============================================
                     let ownerId = null;
                     if (ownerName) {
                         if (email) {
@@ -101,9 +97,7 @@ const importComplexData = async (req, res) => {
                         }
                     }
 
-                    // ============================================
-                    // 3. APARTAMENTO (Se inserta con alícuota 0 por ahora)
-                    // ============================================
+                    // 3. APARTAMENTO
                     const accessCode = crypto
                         .randomBytes(4)
                         .toString("hex")
@@ -114,13 +108,10 @@ const importComplexData = async (req, res) => {
                     );
                 }
 
-                // ============================================
-                // 🔥 CORRECCIÓN 2: CALCULAR ALÍCUOTAS EN PARTES IGUALES
-                // ============================================
+                // 4. CALCULAR ALÍCUOTAS (El 100% dividido en partes iguales)
                 const buildingIds = Object.values(buildingMap);
 
                 for (const bId of buildingIds) {
-                    // Contamos cuántos apartamentos se insertaron en este edificio
                     const [aptCountRes] = await connection.query(
                         `SELECT COUNT(id) as total FROM apartments WHERE building_id = ?`,
                         [bId],
@@ -128,10 +119,7 @@ const importComplexData = async (req, res) => {
                     const totalApts = aptCountRes[0].total;
 
                     if (totalApts > 0) {
-                        // Calculamos la fracción (Ej: Si hay 20 apts, 1 / 20 = 0.0500)
                         const alicuotaEquitativa = (1 / totalApts).toFixed(6);
-
-                        // Actualizamos todos los apartamentos de ese edificio con su porción igualitaria
                         await connection.query(
                             `UPDATE apartments SET alicuota = ? WHERE building_id = ?`,
                             [alicuotaEquitativa, bId],
@@ -142,15 +130,14 @@ const importComplexData = async (req, res) => {
                 await connection.commit();
 
                 res.status(201).json({
-                    message:
-                        "Data importada y alícuotas calculadas exitosamente.",
+                    message: "Data importada y alícuotas calculadas.",
                     edificiosCreados: buildingIds.length,
                 });
             } catch (error) {
                 await connection.rollback();
                 console.error("Error importando datos:", error);
                 res.status(500).json({
-                    message: "Error crítico al importar los datos.",
+                    message: "Error al importar los datos.",
                 });
             } finally {
                 connection.release();
