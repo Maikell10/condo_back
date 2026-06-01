@@ -92,14 +92,33 @@ const createApartment = async (req, res) => {
 // Obtener todas las cuentas de un edificio
 const getBankAccounts = async (req, res) => {
     const { buildingId } = req.params;
+    const { complexId } = req.query; // Lo recibimos si viene 'ALL'
+
     try {
-        const [accounts] = await db.query(
-            "SELECT * FROM bank_accounts WHERE building_id = ? ORDER BY id DESC",
-            [buildingId],
-        );
-        res.json({ data: accounts });
+        if (buildingId === "ALL") {
+            // VISTA GLOBAL: Cuentas de todos los edificios del conjunto
+            const query = `
+                SELECT ba.*, b.name as buildingName
+                FROM bank_accounts ba
+                JOIN buildings b ON ba.building_id = b.id
+                WHERE b.complex_id = ?
+                ORDER BY b.name ASC, ba.bank_name ASC
+            `;
+            const [accounts] = await db.query(query, [complexId]);
+            res.json({ data: accounts });
+        } else {
+            // VISTA INDIVIDUAL: Cuentas de un solo edificio
+            const query = `
+                SELECT ba.*
+                FROM bank_accounts ba
+                WHERE ba.building_id = ?
+                ORDER BY ba.bank_name ASC
+            `;
+            const [accounts] = await db.query(query, [buildingId]);
+            res.json({ data: accounts });
+        }
     } catch (error) {
-        console.error(error);
+        console.error("Error al obtener cuentas:", error);
         res.status(500).json({
             message: "Error al obtener las cuentas bancarias",
         });
