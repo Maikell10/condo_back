@@ -52,7 +52,7 @@ router.delete(
 );
 
 router.get(
-    "/building/:buildingId/aliquots",
+    "/building_a/:buildingId/aliquots",
     authMiddleware.verifyToken,
     apartmentController.getBuildingAliquots,
 );

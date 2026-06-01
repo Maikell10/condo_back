@@ -464,6 +464,34 @@ const registerAdminPayment = async (req, res) => {
     }
 };
 
+const getPendingSummary = async (req, res) => {
+    const { buildingId } = req.params;
+
+    try {
+        const query = `
+            SELECT 
+                a.number as unit, 
+                u.name as owner, 
+                COUNT(r.id) as receipts, 
+                SUM(r.amount - r.paid) as debt
+            FROM apartments a
+            LEFT JOIN users u ON a.owner_id = u.id
+            JOIN receipts r ON a.id = r.apartment_id
+            WHERE a.building_id = ? AND r.status IN ('PENDING', 'PARTIAL')
+            GROUP BY a.id
+            HAVING debt > 0
+            ORDER BY a.number ASC
+        `;
+        const [summary] = await db.query(query, [buildingId]);
+        res.json({ data: summary });
+    } catch (error) {
+        console.error("Error en getPendingSummary:", error);
+        res.status(500).json({
+            message: "Error al obtener el listado de morosidad",
+        });
+    }
+};
+
 module.exports = {
     getBuildingExpenses,
     addExpense,
@@ -473,4 +501,5 @@ module.exports = {
     getMonthlyReport,
     getStatements,
     registerAdminPayment,
+    getPendingSummary,
 };

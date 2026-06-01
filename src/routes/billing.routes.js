@@ -35,4 +35,10 @@ router.post(
     billingController.registerAdminPayment,
 );
 
+router.get(
+    "/building/:buildingId/pending-summary",
+    authMiddleware.verifyToken,
+    billingController.getPendingSummary,
+);
+
 module.exports = router;

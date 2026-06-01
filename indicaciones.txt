@@ -4,7 +4,7 @@ status en Pagos: Fíjate que por defecto un pago entra como PENDING_APPROVAL. As
 
 
 git add .
-git commit -m "update method cors"
+git commit -m "update"
 git push -u origin main
 
 
