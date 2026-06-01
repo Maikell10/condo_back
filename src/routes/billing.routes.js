@@ -3,6 +3,12 @@ const router = express.Router();
 const billingController = require("../controllers/billing.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
+router.get(
+    "/building/:buildingId/pending-summary",
+    authMiddleware.verifyToken,
+    billingController.getPendingSummary,
+);
+
 // Todas estas rutas requieren ser Administrador de Edificio
 router.use(authMiddleware.verifyToken, authMiddleware.isBuildingAdmin);
 
@@ -33,12 +39,6 @@ router.post(
     "/statements/pay",
     authMiddleware.verifyToken,
     billingController.registerAdminPayment,
-);
-
-router.get(
-    "/building/:buildingId/pending-summary",
-    authMiddleware.verifyToken,
-    billingController.getPendingSummary,
 );
 
 module.exports = router;

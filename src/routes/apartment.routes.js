@@ -9,6 +9,12 @@ router.get(
     apartmentController.getBankAccounts,
 );
 
+router.get(
+    "/building_a/:buildingId/aliquots",
+    authMiddleware.verifyToken,
+    apartmentController.getBuildingAliquots,
+);
+
 // Todas las rutas requieren token y ser Administrador
 router.use(authMiddleware.verifyToken, authMiddleware.isBuildingAdmin);
 
@@ -49,12 +55,6 @@ router.delete(
     authMiddleware.verifyToken,
     authMiddleware.isBuildingAdmin,
     apartmentController.deleteBankAccount,
-);
-
-router.get(
-    "/building_a/:buildingId/aliquots",
-    authMiddleware.verifyToken,
-    apartmentController.getBuildingAliquots,
 );
 
 module.exports = router;
