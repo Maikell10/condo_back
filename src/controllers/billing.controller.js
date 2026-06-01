@@ -142,13 +142,52 @@ const getBuildingExpenses = async (req, res) => {
 
 // Registrar un nuevo gasto manual
 const addExpense = async (req, res) => {
-    const { buildingId, conceptId, amount, expenseDate } = req.body;
+    // Recibimos buildingId que puede ser un número (Ej: 1) o el texto 'ALL'
+    const { buildingId, complexId, conceptId, amount, expenseDate } = req.body;
+
     try {
-        await db.query(
-            "INSERT INTO building_expenses (building_id, concept_id, amount, expense_date) VALUES (?, ?, ?, ?)",
-            [buildingId, conceptId, amount, expenseDate],
-        );
-        res.status(201).json({ message: "Gasto registrado correctamente" });
+        if (buildingId === "ALL") {
+            // 1. Buscamos cuántos edificios tiene este conjunto
+            const [buildings] = await db.query(
+                "SELECT id FROM buildings WHERE complex_id = ? AND status = 'ACTIVE'",
+                [complexId],
+            );
+
+            if (buildings.length === 0) {
+                return res
+                    .status(400)
+                    .json({
+                        message:
+                            "No hay edificios registrados en este conjunto.",
+                    });
+            }
+
+            // 2. Prorrateamos (dividimos) el monto total entre la cantidad de edificios
+            const dividedAmount = (
+                parseFloat(amount) / buildings.length
+            ).toFixed(2);
+
+            // 3. Insertamos el gasto para CADA edificio automáticamente
+            for (let b of buildings) {
+                await db.query(
+                    "INSERT INTO building_expenses (building_id, concept_id, amount, expense_date) VALUES (?, ?, ?, ?)",
+                    [b.id, conceptId, dividedAmount, expenseDate],
+                );
+            }
+
+            res.status(201).json({
+                message: `Factura global registrada. Se dividió en $${dividedAmount} para cada edificio.`,
+            });
+        } else {
+            // Lógica normal para un solo edificio
+            await db.query(
+                "INSERT INTO building_expenses (building_id, concept_id, amount, expense_date) VALUES (?, ?, ?, ?)",
+                [buildingId, conceptId, amount, expenseDate],
+            );
+            res.status(201).json({
+                message: "Gasto registrado para el edificio seleccionado.",
+            });
+        }
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Error al registrar el gasto" });

@@ -104,12 +104,8 @@ const getBuildingPayments = async (req, res) => {
         const [payments] = await db.query(query, [adminId, adminId]);
         res.json({ data: payments });
     } catch (error) {
-        console.error("ERROR REAL EN NODE:", error);
-
         res.status(500).json({
             message: "Error al obtener pagos del edificio",
-            detalleDelError: error.message, // <-- ¡MAGIA! Ahora viajará a Angular
-            sql: error.sql, // <-- Te mostrará qué consulta exacta falló
         });
     }
 };
