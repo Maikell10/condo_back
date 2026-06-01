@@ -492,6 +492,83 @@ const getPendingSummary = async (req, res) => {
     }
 };
 
+const getPendingDetailed = async (req, res) => {
+    const { buildingId } = req.params;
+
+    try {
+        const query = `
+            SELECT 
+                a.number as unit, 
+                u.name as owner, 
+                DATE_FORMAT(r.issue_date, '%m-%Y') as period,
+                r.description,
+                (r.amount - r.paid) as debt
+            FROM receipts r
+            JOIN apartments a ON r.apartment_id = a.id
+            LEFT JOIN users u ON a.owner_id = u.id
+            WHERE a.building_id = ? AND r.status IN ('PENDING', 'PARTIAL')
+            ORDER BY a.number ASC, r.issue_date ASC
+        `;
+
+        const [details] = await db.query(query, [buildingId]);
+        res.json({ data: details });
+    } catch (error) {
+        console.error("Error en getPendingDetailed:", error);
+        res.status(500).json({
+            message: "Error al obtener el detalle de morosidad",
+        });
+    }
+};
+
+// 1. Obtiene solo los meses y años que realmente tienen gastos registrados
+const getAvailableExpensePeriods = async (req, res) => {
+    const { buildingId } = req.params;
+
+    try {
+        const query = `
+            SELECT DISTINCT 
+                MONTH(expense_date) as month, 
+                YEAR(expense_date) as year
+            FROM building_expenses
+            WHERE building_id = ?
+            ORDER BY year DESC, month DESC
+        `;
+        const [periods] = await db.query(query, [buildingId]);
+        res.json({ data: periods });
+    } catch (error) {
+        console.error("Error en getAvailableExpensePeriods:", error);
+        res.status(500).json({
+            message: "Error al obtener periodos disponibles",
+        });
+    }
+};
+
+// 2. Obtiene el detalle de los gastos para un mes y año específico
+const getExpensesByPeriod = async (req, res) => {
+    const { buildingId } = req.params;
+    const { month, year } = req.query;
+
+    try {
+        const query = `
+            SELECT 
+                ec.code, 
+                ec.description, 
+                be.amount
+            FROM building_expenses be
+            JOIN expense_concepts ec ON be.concept_id = ec.id
+            WHERE be.building_id = ? AND MONTH(be.expense_date) = ? AND YEAR(be.expense_date) = ?
+            ORDER BY ec.code ASC
+        `;
+        const [expenses] = await db.query(query, [buildingId, month, year]);
+        res.json({ data: expenses });
+    } catch (error) {
+        console.error("Error en getExpensesByPeriod:", error);
+        res.status(500).json({
+            message: "Error al obtener los gastos del periodo",
+        });
+    }
+};
+
 module.exports = {
     getBuildingExpenses,
     addExpense,
@@ -502,4 +579,7 @@ module.exports = {
     getStatements,
     registerAdminPayment,
     getPendingSummary,
+    getPendingDetailed,
+    getAvailableExpensePeriods,
+    getExpensesByPeriod,
 };

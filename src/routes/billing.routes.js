@@ -9,6 +9,23 @@ router.get(
     billingController.getPendingSummary,
 );
 
+router.get(
+    "/building/:buildingId/pending-detailed",
+    authMiddleware.verifyToken,
+    billingController.getPendingDetailed,
+);
+
+router.get(
+    "/building/:buildingId/expense-periods",
+    authMiddleware.verifyToken,
+    billingController.getAvailableExpensePeriods,
+);
+router.get(
+    "/building/:buildingId/expenses-by-period",
+    authMiddleware.verifyToken,
+    billingController.getExpensesByPeriod,
+);
+
 // Todas estas rutas requieren ser Administrador de Edificio
 router.use(authMiddleware.verifyToken, authMiddleware.isBuildingAdmin);
 
