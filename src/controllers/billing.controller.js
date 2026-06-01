@@ -640,6 +640,35 @@ const getOwnerReceiptDetail = async (req, res) => {
     }
 };
 
+const getPaidReceipts = async (req, res) => {
+    const ownerId = req.user.id;
+
+    try {
+        const query = `
+            SELECT 
+                r.id, 
+                CONCAT(MONTH(r.issue_date), '-', YEAR(r.issue_date)) as period,
+                r.paid as amount,
+                r.status,
+                r.issue_date,
+                a.number as apartmentNumber,
+                b.name as buildingName
+            FROM receipts r
+            JOIN apartments a ON r.apartment_id = a.id
+            JOIN buildings b ON a.building_id = b.id
+            WHERE a.owner_id = ? AND r.status = 'PAID'
+            ORDER BY r.issue_date DESC
+        `;
+        const [receipts] = await db.query(query, [ownerId]);
+        res.json({ data: receipts });
+    } catch (error) {
+        console.error("Error en getPaidReceipts:", error);
+        res.status(500).json({
+            message: "Error al obtener historial de pagos",
+        });
+    }
+};
+
 module.exports = {
     getBuildingExpenses,
     addExpense,
@@ -655,4 +684,5 @@ module.exports = {
     getExpensesByPeriod,
     getOwnerReceiptPeriods,
     getOwnerReceiptDetail,
+    getPaidReceipts,
 };

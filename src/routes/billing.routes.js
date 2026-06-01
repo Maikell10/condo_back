@@ -37,6 +37,12 @@ router.get(
     billingController.getOwnerReceiptDetail,
 );
 
+router.get(
+    "/owner/paid-receipts",
+    authMiddleware.verifyToken,
+    billingController.getPaidReceipts,
+);
+
 // Todas estas rutas requieren ser Administrador de Edificio
 router.use(authMiddleware.verifyToken, authMiddleware.isBuildingAdmin);
 
