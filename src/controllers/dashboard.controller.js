@@ -2,7 +2,7 @@ const db = require("../db");
 
 const getDashboardStats = async (req, res) => {
     const { buildingId } = req.params;
-    const { complexId } = req.query; // Solo si buildingId es 'ALL'
+    const { complexId } = req.query; // Solo viene si buildingId es 'ALL'
 
     try {
         let stats = {
@@ -23,10 +23,10 @@ const getDashboardStats = async (req, res) => {
             },
         };
 
+        // --- Configuración de Fecha para Eficiencia de Recaudación ---
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth() + 1;
         const currentYear = currentDate.getFullYear();
-
         const monthNames = [
             "Enero",
             "Febrero",
@@ -43,14 +43,16 @@ const getDashboardStats = async (req, res) => {
         ];
         stats.collection.period = `${monthNames[currentMonth - 1]} ${currentYear}`;
 
+        // --- Variables Dinámicas (Vista Global vs Individual) ---
+        let filterApartments = "";
+        let filterReceiptsBuilding = "";
         let queryParams = [];
-        let buildingFilter = "";
-        let aptFilter = "";
 
         if (buildingId === "ALL") {
-            stats.building = { name: "Conjunto Residencial", code: "GLOBAL" };
-            buildingFilter = "b.complex_id = ?";
-            aptFilter = "IN (SELECT id FROM buildings WHERE complex_id = ?)";
+            stats.building = { name: "Resumen del Conjunto", code: "GLOBAL" };
+            filterApartments =
+                "building_id IN (SELECT id FROM buildings WHERE complex_id = ?)";
+            filterReceiptsBuilding = "b.complex_id = ?";
             queryParams = [complexId];
         } else {
             const [bInfo] = await db.query(
@@ -58,17 +60,53 @@ const getDashboardStats = async (req, res) => {
                 [buildingId],
             );
             stats.building = bInfo[0] || { name: "Edificio", code: "N/A" };
-            buildingFilter = "b.id = ?";
-            aptFilter = "= ?";
+            filterApartments = "building_id = ?";
+            filterReceiptsBuilding = "b.id = ?";
             queryParams = [buildingId];
         }
 
-        // --- 1. Obtener KPIs Básicos ---
-        // (Asumiendo que tienes consultas similares, aquí te dejo la idea de las sumatorias)
-        // stats.kpis.totalApartments = ...
-        // stats.kpis.monthIncome = ... (Suma de payments APPROVED del mes)
+        // --- 1. KPIs de Apartamentos ---
+        const [kpiApts] = await db.query(
+            `
+            SELECT 
+                COUNT(*) as total,
+                COUNT(owner_id) as occupied,
+                (SELECT COUNT(DISTINCT apartment_id) FROM receipts 
+                 WHERE status IN ('PENDING', 'PARTIAL') AND apartment_id IN (SELECT id FROM apartments WHERE ${filterApartments})) as delinquent
+            FROM apartments WHERE ${filterApartments}
+        `,
+            [...queryParams, ...queryParams],
+        );
 
-        // --- 2. EFICIENCIA DE RECAUDACIÓN (El corazón de tu solicitud) ---
+        // --- 2. Ingresos del mes (De pagos aprobados) ---
+        const [income] = await db.query(
+            `
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE status = 'APPROVED' 
+            AND MONTH(payment_date) = MONTH(CURRENT_DATE())
+            AND YEAR(payment_date) = YEAR(CURRENT_DATE())
+            AND apartment_id IN (SELECT id FROM apartments WHERE ${filterApartments})
+        `,
+            [...queryParams],
+        );
+
+        // --- 3. Apartamentos con mayor deuda (Featured) ---
+        const [featured] = await db.query(
+            `
+            SELECT a.number, u.name as ownerName, 
+                   COALESCE(SUM(r.amount - r.paid), 0) as balance
+            FROM apartments a
+            LEFT JOIN users u ON a.owner_id = u.id
+            JOIN receipts r ON a.id = r.apartment_id
+            WHERE a.${filterApartments} AND r.status IN ('PENDING', 'PARTIAL')
+            GROUP BY a.id
+            ORDER BY balance DESC LIMIT 4
+        `,
+            [...queryParams],
+        );
+
+        // --- 4. Eficiencia de Recaudación (Módulo Nuevo) ---
         const collectionQuery = `
             SELECT 
                 COALESCE(SUM(r.amount), 0) as expected,
@@ -76,7 +114,7 @@ const getDashboardStats = async (req, res) => {
             FROM receipts r
             JOIN apartments a ON r.apartment_id = a.id
             JOIN buildings b ON a.building_id = b.id
-            WHERE ${buildingFilter} AND MONTH(r.issue_date) = ? AND YEAR(r.issue_date) = ?
+            WHERE ${filterReceiptsBuilding} AND MONTH(r.issue_date) = ? AND YEAR(r.issue_date) = ?
         `;
         const [collData] = await db.query(collectionQuery, [
             ...queryParams,
@@ -84,9 +122,15 @@ const getDashboardStats = async (req, res) => {
             currentYear,
         ]);
 
+        // --- Mapeo de resultados al objeto final ---
+        stats.kpis.totalApartments = kpiApts[0].total;
+        stats.kpis.occupied = kpiApts[0].occupied;
+        stats.kpis.delinquent = kpiApts[0].delinquent;
+        stats.kpis.monthIncome = income[0].total;
+        stats.featured = featured;
+
         const expected = parseFloat(collData[0].expected);
         const collected = parseFloat(collData[0].collected);
-
         stats.collection.expected = expected;
         stats.collection.collected = collected;
         stats.collection.missing =
@@ -97,7 +141,7 @@ const getDashboardStats = async (req, res) => {
         res.json(stats);
     } catch (error) {
         console.error("Error en getDashboardStats:", error);
-        res.status(500).json({ message: "Error al cargar el dashboard" });
+        res.status(500).json({ message: "Error al cargar estadísticas" });
     }
 };
 
