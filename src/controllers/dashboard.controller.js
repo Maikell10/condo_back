@@ -145,4 +145,66 @@ const getDashboardStats = async (req, res) => {
     }
 };
 
-module.exports = { getDashboardStats };
+const getOwnerDashboard = async (req, res) => {
+    const ownerId = req.user.id; // Asumiendo que el middleware de auth inyecta el user
+    try {
+        // 1. Obtener datos del apartamento y propietario
+        const [aptData] = await db.query(
+            `
+            SELECT a.id, a.number, b.name as buildingName, a.alicuota
+            FROM apartments a
+            JOIN buildings b ON a.building_id = b.id
+            WHERE a.owner_id = ?
+            LIMIT 1`,
+            [ownerId],
+        );
+
+        if (aptData.length === 0)
+            return res
+                .status(404)
+                .json({ message: "No tienes apartamentos asignados" });
+        const apartment = aptData[0];
+
+        // 2. Calcular Estado Financiero (Deuda actual)
+        const [receipts] = await db.query(
+            `
+            SELECT COALESCE(SUM(amount - paid), 0) as currentDebt, COUNT(*) as pendingCount
+            FROM receipts 
+            WHERE apartment_id = ? AND status IN ('PENDING', 'PARTIAL')`,
+            [apartment.id],
+        );
+
+        // 3. Último Pago Verificado
+        const [lastPayment] = await db.query(
+            `
+            SELECT amount, DATE_FORMAT(payment_date, '%d %b %Y') as date, bank_account
+            FROM payments 
+            WHERE apartment_id = ? AND status = 'APPROVED'
+            ORDER BY payment_date DESC LIMIT 1`,
+            [apartment.id],
+        );
+
+        res.json({
+            owner: {
+                name: req.user.name,
+                building: apartment.buildingName,
+                unit: apartment.number,
+                aliquot: parseFloat(apartment.alicuota) * 100,
+            },
+            financialStatus: {
+                currentDebt: receipts[0].currentDebt,
+                status: receipts[0].currentDebt > 0 ? "DEBT" : "UP_TO_DATE",
+                pendingReceipts: receipts[0].pendingCount,
+            },
+            lastPayment: lastPayment[0] || {
+                amount: 0,
+                date: "N/A",
+                method: "N/A",
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error al cargar dashboard" });
+    }
+};
+
+module.exports = { getDashboardStats, getOwnerDashboard };

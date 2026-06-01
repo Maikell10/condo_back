@@ -9,4 +9,10 @@ router.get(
     dashboardController.getDashboardStats,
 );
 
+router.get(
+    "/owner/dashboard",
+    authMiddleware.verifyToken,
+    dashboardController.getOwnerDashboard,
+);
+
 module.exports = router;
