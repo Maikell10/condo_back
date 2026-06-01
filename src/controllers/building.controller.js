@@ -29,6 +29,7 @@ const getBuildingsByComplex = async (req, res) => {
 };
 
 const importComplexData = async (req, res) => {
+    // ⚠️ IMPORTANTE: Asegúrate de que el ID 2 exista en la tabla 'residential_complexes'
     const complexId = 2;
 
     if (!req.file) {
@@ -39,12 +40,30 @@ const importComplexData = async (req, res) => {
 
     const results = [];
 
-    // 🔥 EL FIX MÁGICO: Envolver req.file.buffer en corchetes [ ]
-    Readable.from([req.file.buffer])
-        // Le decimos que el separador es ';' (según tu último archivo)
-        .pipe(csv({ separator: ";" }))
+    // 🔥 FIX MÁGICO 1: Convertimos explícitamente los bytes a Texto UTF-8
+    const fileString = req.file.buffer.toString("utf-8");
+
+    Readable.from(fileString)
+        .pipe(
+            csv({
+                separator: ";", // El separador de tu archivo
+                // 🔥 FIX MÁGICO 2: Limpiamos espacios y caracteres ocultos de Excel en los títulos
+                mapHeaders: ({ header }) =>
+                    header.trim().replace(/^[\uFEFF\u200B]/g, ""),
+            }),
+        )
         .on("data", (data) => results.push(data))
         .on("end", async () => {
+            // Si después de leer, el arreglo está vacío, avisamos el error real.
+            if (results.length === 0) {
+                return res
+                    .status(400)
+                    .json({
+                        message:
+                            "El archivo se procesó pero no se encontraron filas o los títulos de las columnas no coinciden.",
+                    });
+            }
+
             const connection = await db.getConnection();
 
             try {
@@ -56,11 +75,16 @@ const importComplexData = async (req, res) => {
                     const buildingName = row["building_name"]?.trim();
                     const aptNumber = row["apartment"]?.trim();
                     const ownerName = row["Nombre Propietario"]?.trim();
-                    let email = row["email"]?.trim() || null;
+
+                    // Asegurar que si el correo está vacío, sea NULL para la BD
+                    let email = row["email"]?.trim();
+                    email = email === "" || email === undefined ? null : email;
 
                     if (!buildingName || !aptNumber) continue;
 
+                    // ==============================
                     // 1. EDIFICIOS
+                    // ==============================
                     if (!buildingMap[buildingName]) {
                         const randomHex = crypto
                             .randomBytes(2)
@@ -76,7 +100,9 @@ const importComplexData = async (req, res) => {
                     }
                     const currentBuildingId = buildingMap[buildingName];
 
-                    // 2. PROPIETARIO
+                    // ==============================
+                    // 2. PROPIETARIOS
+                    // ==============================
                     let ownerId = null;
                     if (ownerName) {
                         if (email) {
@@ -97,7 +123,9 @@ const importComplexData = async (req, res) => {
                         }
                     }
 
-                    // 3. APARTAMENTO
+                    // ==============================
+                    // 3. APARTAMENTOS
+                    // ==============================
                     const accessCode = crypto
                         .randomBytes(4)
                         .toString("hex")
@@ -108,7 +136,9 @@ const importComplexData = async (req, res) => {
                     );
                 }
 
-                // 4. CALCULAR ALÍCUOTAS (El 100% dividido en partes iguales)
+                // ==============================
+                // 4. CALCULAR ALÍCUOTAS POR EDIFICIO
+                // ==============================
                 const buildingIds = Object.values(buildingMap);
 
                 for (const bId of buildingIds) {
@@ -130,14 +160,17 @@ const importComplexData = async (req, res) => {
                 await connection.commit();
 
                 res.status(201).json({
-                    message: "Data importada y alícuotas calculadas.",
+                    message:
+                        "Data importada y alícuotas divididas en partes iguales.",
                     edificiosCreados: buildingIds.length,
                 });
             } catch (error) {
                 await connection.rollback();
                 console.error("Error importando datos:", error);
+
+                // 🔥 FIX MÁGICO 3: Si hay un error de SQL (Ej: Llave foránea), lo mandamos al FrontEnd para que lo veas.
                 res.status(500).json({
-                    message: "Error al importar los datos.",
+                    message: "Error SQL: " + error.message,
                 });
             } finally {
                 connection.release();
