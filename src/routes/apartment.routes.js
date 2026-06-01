@@ -51,4 +51,10 @@ router.delete(
     apartmentController.deleteBankAccount,
 );
 
+router.get(
+    "/building/:buildingId/aliquots",
+    authMiddleware.verifyToken,
+    apartmentController.getBuildingAliquots,
+);
+
 module.exports = router;

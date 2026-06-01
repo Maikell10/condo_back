@@ -222,6 +222,28 @@ const deleteBankAccount = async (req, res) => {
     }
 };
 
+// Obtiene la lista de alícuotas para que los propietarios la vean
+const getBuildingAliquots = async (req, res) => {
+    const { buildingId } = req.params;
+
+    try {
+        const query = `
+            SELECT a.id, a.number as unit, u.name as ownerName, a.owner_id as ownerId, a.alicuota
+            FROM apartments a
+            LEFT JOIN users u ON a.owner_id = u.id
+            WHERE a.building_id = ?
+            ORDER BY a.number ASC
+        `;
+        const [aliquots] = await db.query(query, [buildingId]);
+        res.json({ data: aliquots });
+    } catch (error) {
+        console.error("Error en getBuildingAliquots:", error);
+        res.status(500).json({
+            message: "Error al obtener la tabla de alícuotas.",
+        });
+    }
+};
+
 module.exports = {
     getApartmentsByBuilding,
     updateAlicuota,
@@ -231,4 +253,5 @@ module.exports = {
     createBankAccount,
     updateBankAccount,
     deleteBankAccount,
+    getBuildingAliquots,
 };
