@@ -117,11 +117,29 @@ const getBuildingExpenses = async (req, res) => {
                 year,
             ]);
 
-            // En la vista global no hay "estado del mes" porque el cierre es por torre individual
+            // 2. LÓGICA DE ESTADO GLOBAL: ¿Están todos los edificios cerrados?
+            const [totalBuildings] = await db.query(
+                "SELECT COUNT(id) as count FROM buildings WHERE complex_id = ? AND status = 'ACTIVE'",
+                [complexId],
+            );
+
+            const [closedPeriods] = await db.query(
+                `SELECT COUNT(bp.id) as count 
+                 FROM billing_periods bp
+                 JOIN buildings b ON bp.building_id = b.id
+                 WHERE b.complex_id = ? AND bp.month = ? AND bp.year = ? AND bp.status = 'CLOSED'`,
+                [complexId, month, year],
+            );
+
+            // Si la cantidad de edificios del conjunto es igual a la cantidad de periodos cerrados de ese mes
+            const isFullyClosed =
+                totalBuildings[0].count > 0 &&
+                totalBuildings[0].count === closedPeriods[0].count;
+
             res.json({
                 data: expenses,
-                status: "OPEN",
-                canClose: false, // Bloqueado por seguridad
+                status: isFullyClosed ? "CLOSED" : "OPEN",
+                canClose: false, // Se mantiene en FALSE para obligar a facturar por edificio individualmente
             });
         } else {
             // 2. VISTA INDIVIDUAL: Lógica original para un solo edificio
@@ -336,6 +354,57 @@ const getMonthlyReport = async (req, res) => {
     }
 };
 
+//Estado de cuenta del building_admin
+const getStatements = async (req, res) => {
+    // buildingId puede ser un número (ej. 1) o 'ALL'
+    const { buildingId } = req.params;
+    const { complexId } = req.query;
+
+    try {
+        let query = "";
+        let params = [];
+
+        if (buildingId === "ALL") {
+            // VISTA GLOBAL: Recibos de todos los edificios del conjunto
+            query = `
+                SELECT r.id, DATE_FORMAT(r.issue_date, '%Y-%m-%d') as issueDate, 
+                       r.amount, r.paid, (r.amount - r.paid) as balance, 
+                       r.status, r.description,
+                       a.number as apartment, u.name as ownerName, b.name as buildingName
+                FROM receipts r
+                JOIN apartments a ON r.apartment_id = a.id
+                JOIN buildings b ON a.building_id = b.id
+                LEFT JOIN users u ON a.owner_id = u.id
+                WHERE b.complex_id = ?
+                ORDER BY r.issue_date DESC, b.name ASC, a.number ASC
+            `;
+            params = [complexId];
+        } else {
+            // VISTA INDIVIDUAL: Recibos de un solo edificio
+            query = `
+                SELECT r.id, DATE_FORMAT(r.issue_date, '%Y-%m-%d') as issueDate, 
+                       r.amount, r.paid, (r.amount - r.paid) as balance, 
+                       r.status, r.description,
+                       a.number as apartment, u.name as ownerName
+                FROM receipts r
+                JOIN apartments a ON r.apartment_id = a.id
+                LEFT JOIN users u ON a.owner_id = u.id
+                WHERE a.building_id = ?
+                ORDER BY r.issue_date DESC, a.number ASC
+            `;
+            params = [buildingId];
+        }
+
+        const [receipts] = await db.query(query, params);
+        res.json({ data: receipts });
+    } catch (error) {
+        console.error("Error en getStatements:", error);
+        res.status(500).json({
+            message: "Error al obtener los estados de cuenta",
+        });
+    }
+};
+
 module.exports = {
     getBuildingExpenses,
     addExpense,
@@ -343,4 +412,5 @@ module.exports = {
     getClosedPeriods,
     deleteExpense,
     getMonthlyReport,
+    getStatements,
 };

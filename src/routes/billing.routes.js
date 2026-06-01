@@ -23,4 +23,10 @@ router.get(
     billingController.getMonthlyReport,
 );
 
+router.get(
+    "/statements/:buildingId",
+    authMiddleware.verifyToken,
+    billingController.getStatements,
+);
+
 module.exports = router;
