@@ -6,6 +6,9 @@ const authMiddleware = require("../middlewares/auth.middleware");
 router.use(authMiddleware.verifyToken, authMiddleware.isBuildingAdmin);
 
 router.get("/:buildingId", contractController.getContracts);
+
+router.get("/complex/:complexId", contractController.getComplexContracts);
+
 router.post("/", contractController.createContract);
 
 module.exports = router;
