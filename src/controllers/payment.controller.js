@@ -95,13 +95,13 @@ const getBuildingPayments = async (req, res) => {
                 b.name as buildingName 
             FROM payments p
             JOIN apartments a ON p.apartment_id = a.id
-            JOIN users u ON a.owner_id = u.id
             JOIN buildings b ON a.building_id = b.id
+            LEFT JOIN users u ON a.owner_id = u.id
             LEFT JOIN residential_complexes rc ON b.complex_id = rc.id
             WHERE b.admin_id = ? OR rc.admin_id = ?
             ORDER BY p.created_at DESC
         `;
-        const [payments] = await db.query(query, [adminId]);
+        const [payments] = await db.query(query, [adminId, adminId]);
         res.json({ data: payments });
     } catch (error) {
         console.error("ERROR REAL EN NODE:", error);
