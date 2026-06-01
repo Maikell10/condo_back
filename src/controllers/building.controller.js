@@ -29,8 +29,8 @@ const getBuildingsByComplex = async (req, res) => {
 };
 
 const importComplexData = async (req, res) => {
-    // ⚠️ IMPORTANTE: Asegúrate de que el ID 2 exista en la tabla 'residential_complexes'
     const complexId = 2;
+    const adminId = 6; // 🔥 REQUERIMIENTO: Todos los edificios se asignan a este admin_id
 
     if (!req.file) {
         return res
@@ -39,28 +39,24 @@ const importComplexData = async (req, res) => {
     }
 
     const results = [];
-
-    // 🔥 FIX MÁGICO 1: Convertimos explícitamente los bytes a Texto UTF-8
     const fileString = req.file.buffer.toString("utf-8");
 
     Readable.from(fileString)
         .pipe(
             csv({
-                separator: ";", // El separador de tu archivo
-                // 🔥 FIX MÁGICO 2: Limpiamos espacios y caracteres ocultos de Excel en los títulos
+                separator: ";",
                 mapHeaders: ({ header }) =>
                     header.trim().replace(/^[\uFEFF\u200B]/g, ""),
             }),
         )
         .on("data", (data) => results.push(data))
         .on("end", async () => {
-            // Si después de leer, el arreglo está vacío, avisamos el error real.
             if (results.length === 0) {
                 return res
                     .status(400)
                     .json({
                         message:
-                            "El archivo se procesó pero no se encontraron filas o los títulos de las columnas no coinciden.",
+                            "El archivo se procesó pero no se encontraron filas válidas.",
                     });
             }
 
@@ -69,6 +65,8 @@ const importComplexData = async (req, res) => {
             try {
                 await connection.beginTransaction();
                 const defaultPassword = await bcrypt.hash("123456", 10);
+
+                // Diccionario temporal para no consultar la BD miles de veces por el mismo edificio
                 const buildingMap = {};
 
                 for (const row of results) {
@@ -76,27 +74,43 @@ const importComplexData = async (req, res) => {
                     const aptNumber = row["apartment"]?.trim();
                     const ownerName = row["Nombre Propietario"]?.trim();
 
-                    // Asegurar que si el correo está vacío, sea NULL para la BD
                     let email = row["email"]?.trim();
                     email = email === "" || email === undefined ? null : email;
 
                     if (!buildingName || !aptNumber) continue;
 
                     // ==============================
-                    // 1. EDIFICIOS
+                    // 1. EDIFICIOS (Blindaje anti-duplicados reales)
                     // ==============================
                     if (!buildingMap[buildingName]) {
-                        const randomHex = crypto
-                            .randomBytes(2)
-                            .toString("hex")
-                            .toUpperCase();
-                        const buildingCode = `BLD-${complexId}-${buildingName}-${randomHex}`;
-
-                        const [bResult] = await connection.query(
-                            `INSERT INTO buildings (complex_id, name, code, status) VALUES (?, ?, ?, 'ACTIVE')`,
-                            [complexId, buildingName, buildingCode],
+                        // Buscamos si YA EXISTE en la base de datos
+                        const [existingBuilding] = await connection.query(
+                            `SELECT id FROM buildings WHERE complex_id = ? AND name = ?`,
+                            [complexId, buildingName],
                         );
-                        buildingMap[buildingName] = bResult.insertId;
+
+                        if (existingBuilding.length > 0) {
+                            // Si existe, reciclamos su ID
+                            buildingMap[buildingName] = existingBuilding[0].id;
+                        } else {
+                            // Si NO existe, lo creamos con admin_id = 1
+                            const randomHex = crypto
+                                .randomBytes(2)
+                                .toString("hex")
+                                .toUpperCase();
+                            const buildingCode = `BLD-${complexId}-${buildingName}-${randomHex}`;
+
+                            const [bResult] = await connection.query(
+                                `INSERT INTO buildings (complex_id, admin_id, name, code, status) VALUES (?, ?, ?, ?, 'ACTIVE')`,
+                                [
+                                    complexId,
+                                    adminId,
+                                    buildingName,
+                                    buildingCode,
+                                ],
+                            );
+                            buildingMap[buildingName] = bResult.insertId;
+                        }
                     }
                     const currentBuildingId = buildingMap[buildingName];
 
@@ -124,16 +138,31 @@ const importComplexData = async (req, res) => {
                     }
 
                     // ==============================
-                    // 3. APARTAMENTOS
+                    // 3. APARTAMENTOS (Blindaje anti-duplicados)
                     // ==============================
-                    const accessCode = crypto
-                        .randomBytes(4)
-                        .toString("hex")
-                        .toUpperCase();
-                    await connection.query(
-                        `INSERT INTO apartments (building_id, owner_id, number, access_code, alicuota) VALUES (?, ?, ?, ?, 0)`,
-                        [currentBuildingId, ownerId, aptNumber, accessCode],
+                    // Verificamos si el apartamento ya fue creado en ese edificio
+                    const [existingApt] = await connection.query(
+                        `SELECT id FROM apartments WHERE building_id = ? AND number = ?`,
+                        [currentBuildingId, aptNumber],
                     );
+
+                    if (existingApt.length === 0) {
+                        // Si no existe, lo creamos
+                        const accessCode = crypto
+                            .randomBytes(4)
+                            .toString("hex")
+                            .toUpperCase();
+                        await connection.query(
+                            `INSERT INTO apartments (building_id, owner_id, number, access_code, alicuota) VALUES (?, ?, ?, ?, 0)`,
+                            [currentBuildingId, ownerId, aptNumber, accessCode],
+                        );
+                    } else if (ownerId) {
+                        // Si ya existe, solo le actualizamos el propietario por si cambió en el Excel
+                        await connection.query(
+                            `UPDATE apartments SET owner_id = ? WHERE id = ?`,
+                            [ownerId, existingApt[0].id],
+                        );
+                    }
                 }
 
                 // ==============================
@@ -160,15 +189,12 @@ const importComplexData = async (req, res) => {
                 await connection.commit();
 
                 res.status(201).json({
-                    message:
-                        "Data importada y alícuotas divididas en partes iguales.",
-                    edificiosCreados: buildingIds.length,
+                    message: "Data procesada y sincronizada perfectamente.",
+                    edificiosProcesados: buildingIds.length,
                 });
             } catch (error) {
                 await connection.rollback();
                 console.error("Error importando datos:", error);
-
-                // 🔥 FIX MÁGICO 3: Si hay un error de SQL (Ej: Llave foránea), lo mandamos al FrontEnd para que lo veas.
                 res.status(500).json({
                     message: "Error SQL: " + error.message,
                 });
