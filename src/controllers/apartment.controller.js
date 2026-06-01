@@ -10,6 +10,7 @@ const getApartmentsByBuilding = async (req, res) => {
                 a.number, 
                 u.name as ownerName, 
                 a.alicuota,
+                a.access_code,
                 -- Calculamos el balance sumando los recibos PENDING
                 COALESCE(SUM(CASE WHEN r.status = 'PENDING' THEN (r.amount - r.paid) ELSE 0 END), 0) as balance
             FROM apartments a

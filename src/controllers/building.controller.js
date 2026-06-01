@@ -7,7 +7,7 @@ const getBuildingsByComplex = async (req, res) => {
     try {
         // Reutilizamos la lógica infalible: Traer edificios suyos o de su conjunto
         const [buildings] = await db.query(
-            `SELECT b.id, b.name, b.code 
+            `SELECT b.id, b.name, b.code
              FROM buildings b 
              LEFT JOIN residential_complexes rc ON b.complex_id = rc.id 
              WHERE (b.admin_id = ? OR rc.admin_id = ?) AND b.status = 'ACTIVE'`,
