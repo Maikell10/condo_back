@@ -569,6 +569,77 @@ const getExpensesByPeriod = async (req, res) => {
     }
 };
 
+// 1. Obtiene los recibos (periodos y apartamentos) que le pertenecen al propietario logueado
+const getOwnerReceiptPeriods = async (req, res) => {
+    const ownerId = req.user.id;
+    try {
+        const query = `
+            SELECT DISTINCT 
+                a.id as apartmentId, 
+                a.number as apartmentNumber, 
+                a.alicuota,
+                MONTH(r.issue_date) as month, 
+                YEAR(r.issue_date) as year
+            FROM receipts r
+            JOIN apartments a ON r.apartment_id = a.id
+            WHERE a.owner_id = ?
+            ORDER BY year DESC, month DESC, a.number ASC
+        `;
+        const [periods] = await db.query(query, [ownerId]);
+        res.json({ data: periods });
+    } catch (error) {
+        console.error("Error en getOwnerReceiptPeriods:", error);
+        res.status(500).json({
+            message: "Error al obtener periodos del recibo",
+        });
+    }
+};
+
+// 2. Obtiene el detalle de gastos del edificio para calcular el recibo
+const getOwnerReceiptDetail = async (req, res) => {
+    const { apartmentId } = req.params;
+    const { month, year } = req.query;
+
+    try {
+        // 1. Obtener datos del apartamento para la matemática
+        const [aptData] = await db.query(
+            "SELECT building_id, alicuota, number FROM apartments WHERE id = ?",
+            [apartmentId],
+        );
+        if (aptData.length === 0)
+            return res
+                .status(404)
+                .json({ message: "Apartamento no encontrado" });
+
+        const alicuota = parseFloat(aptData[0].alicuota);
+        const buildingId = aptData[0].building_id;
+
+        // 2. Obtener gastos del edificio en ese periodo
+        const query = `
+            SELECT 
+                ec.code, 
+                ec.description, 
+                be.amount as totalAmount
+            FROM building_expenses be
+            JOIN expense_concepts ec ON be.concept_id = ec.id
+            WHERE be.building_id = ? AND MONTH(be.expense_date) = ? AND YEAR(be.expense_date) = ?
+            ORDER BY ec.code ASC
+        `;
+        const [expenses] = await db.query(query, [buildingId, month, year]);
+
+        res.json({
+            data: expenses,
+            alicuota: alicuota,
+            apartmentNumber: aptData[0].number,
+        });
+    } catch (error) {
+        console.error("Error en getOwnerReceiptDetail:", error);
+        res.status(500).json({
+            message: "Error al obtener el detalle del recibo",
+        });
+    }
+};
+
 module.exports = {
     getBuildingExpenses,
     addExpense,
@@ -582,4 +653,6 @@ module.exports = {
     getPendingDetailed,
     getAvailableExpensePeriods,
     getExpensesByPeriod,
+    getOwnerReceiptPeriods,
+    getOwnerReceiptDetail,
 };

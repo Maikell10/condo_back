@@ -26,6 +26,17 @@ router.get(
     billingController.getExpensesByPeriod,
 );
 
+router.get(
+    "/owner/receipt-periods",
+    authMiddleware.verifyToken,
+    billingController.getOwnerReceiptPeriods,
+);
+router.get(
+    "/owner/receipt-detail/:apartmentId",
+    authMiddleware.verifyToken,
+    billingController.getOwnerReceiptDetail,
+);
+
 // Todas estas rutas requieren ser Administrador de Edificio
 router.use(authMiddleware.verifyToken, authMiddleware.isBuildingAdmin);
 
