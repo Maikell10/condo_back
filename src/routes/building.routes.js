@@ -4,8 +4,9 @@ const multer = require("multer");
 const buildingController = require("../controllers/building.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
-// Configuramos multer para que guarde temporalmente los archivos en una carpeta 'uploads/'
-const upload = multer({ dest: "uploads/" });
+// 🔥 CORRECCIÓN: Usar MemoryStorage en lugar de 'dest: uploads/'
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // IMPORTANTE: 'file' es el nombre del campo que enviará Angular en el FormData
 router.post(
