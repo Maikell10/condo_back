@@ -370,7 +370,8 @@ const getStatements = async (req, res) => {
                 SELECT r.id, DATE_FORMAT(r.issue_date, '%Y-%m-%d') as issueDate, 
                        r.amount, r.paid, (r.amount - r.paid) as balance, 
                        r.status, r.description,
-                       a.number as apartment, u.name as ownerName, b.name as buildingName
+                       a.number as apartment, u.name as ownerName, b.name as buildingName,
+                       a.id as apartmentId, a.building_id as buildingId
                 FROM receipts r
                 JOIN apartments a ON r.apartment_id = a.id
                 JOIN buildings b ON a.building_id = b.id
@@ -405,6 +406,64 @@ const getStatements = async (req, res) => {
     }
 };
 
+const registerAdminPayment = async (req, res) => {
+    const {
+        receiptId,
+        apartmentId,
+        bankAccountId,
+        operationType,
+        reference,
+        amount,
+        paymentDate,
+    } = req.body;
+
+    try {
+        // 1. Obtener la información actual del recibo para matemáticas precisas
+        const [receipts] = await db.query(
+            "SELECT amount, paid FROM receipts WHERE id = ?",
+            [receiptId],
+        );
+        if (receipts.length === 0)
+            return res.status(404).json({ message: "Recibo no encontrado" });
+
+        const receipt = receipts[0];
+
+        // Sumamos lo que ya tenía pagado + el nuevo abono
+        const newPaid = parseFloat(receipt.paid) + parseFloat(amount);
+
+        // Si lo pagado alcanza o supera el total, se marca PAID, sino PARTIAL
+        const newStatus =
+            newPaid >= parseFloat(receipt.amount) ? "PAID" : "PARTIAL";
+
+        // 2. Insertar el pago en la tabla payments (entra directamente como APPROVED)
+        await db.query(
+            `INSERT INTO payments (apartment_id, bank_account, operation_type, reference, amount, payment_date, status)
+             VALUES (?, ?, ?, ?, ?, ?, 'APPROVED')`,
+            [
+                apartmentId,
+                bankAccountId,
+                operationType,
+                reference,
+                amount,
+                paymentDate,
+            ],
+        );
+
+        // 3. Actualizar los montos y el estado en el recibo
+        await db.query(
+            `UPDATE receipts SET paid = ?, status = ? WHERE id = ?`,
+            [newPaid, newStatus, receiptId],
+        );
+
+        res.json({
+            message: "Pago registrado exitosamente y recibo actualizado.",
+        });
+    } catch (error) {
+        console.error("Error en registerAdminPayment:", error);
+        res.status(500).json({ message: "Error al procesar el pago." });
+    }
+};
+
 module.exports = {
     getBuildingExpenses,
     addExpense,
@@ -413,4 +472,5 @@ module.exports = {
     deleteExpense,
     getMonthlyReport,
     getStatements,
+    registerAdminPayment,
 };

@@ -29,4 +29,10 @@ router.get(
     billingController.getStatements,
 );
 
+router.post(
+    "/statements/pay",
+    authMiddleware.verifyToken,
+    billingController.registerAdminPayment,
+);
+
 module.exports = router;
