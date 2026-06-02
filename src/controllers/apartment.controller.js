@@ -129,6 +129,7 @@ const getBankAccounts = async (req, res) => {
 const createBankAccount = async (req, res) => {
     const {
         building_id,
+        complex_id,
         bank_name,
         account_number,
         account_type,
@@ -136,38 +137,74 @@ const createBankAccount = async (req, res) => {
         holder_id,
     } = req.body;
 
-    if (
-        !building_id ||
-        !bank_name ||
-        !account_number ||
-        !holder_name ||
-        !holder_id
-    ) {
-        return res.status(400).json({ message: "Faltan campos obligatorios" });
-    }
-
     try {
-        const query = `
-            INSERT INTO bank_accounts 
-            (building_id, bank_name, account_number, account_type, holder_name, holder_id) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        `;
-        const [result] = await db.query(query, [
-            building_id,
-            bank_name,
-            account_number,
-            account_type || "CORRIENTE",
-            holder_name,
-            holder_id,
-        ]);
+        // 🔥 LÓGICA DE CONJUNTO RESIDENCIAL (INSERCIÓN MASIVA)
+        if (building_id === "ALL" && complex_id) {
+            // 1. Buscamos todos los edificios que pertenecen a este conjunto
+            const [buildings] = await db.query(
+                "SELECT id FROM buildings WHERE complex_id = ? AND status = 'ACTIVE'",
+                [complex_id],
+            );
 
-        res.status(201).json({
-            message: "Cuenta bancaria registrada exitosamente",
-            id: result.insertId,
-        });
+            if (buildings.length === 0) {
+                return res
+                    .status(404)
+                    .json({
+                        message: "No hay edificios activos en este conjunto.",
+                    });
+            }
+
+            // 2. Preparamos la data para el "Bulk Insert" (Insertar múltiples filas de golpe)
+            // MySQL requiere un arreglo de arreglos: [ [val1, val2], [val1, val2] ]
+            const values = buildings.map((b) => [
+                b.id,
+                bank_name,
+                account_number,
+                account_type,
+                holder_name,
+                holder_id,
+                "ACTIVE",
+            ]);
+
+            // 3. Insertamos en todos los edificios simultáneamente
+            await db.query(
+                `INSERT INTO bank_accounts 
+                (building_id, bank_name, account_number, account_type, holder_name, holder_id, status) 
+                VALUES ?`,
+                [values], // Nota: En una inserción bulk con MySQL2, se pasa el array anidado dentro de un array
+            );
+
+            return res
+                .status(201)
+                .json({
+                    message: `Cuenta registrada exitosamente en ${buildings.length} edificios.`,
+                });
+        }
+
+        // LÓGICA NORMAL (UN SOLO EDIFICIO)
+        else {
+            await db.query(
+                `INSERT INTO bank_accounts 
+                (building_id, bank_name, account_number, account_type, holder_name, holder_id, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')`,
+                [
+                    building_id,
+                    bank_name,
+                    account_number,
+                    account_type,
+                    holder_name,
+                    holder_id,
+                ],
+            );
+            return res
+                .status(201)
+                .json({ message: "Cuenta registrada exitosamente." });
+        }
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error al registrar la cuenta" });
+        console.error("Error al crear cuenta bancaria:", error);
+        res.status(500).json({
+            message: "Error interno al registrar la cuenta.",
+        });
     }
 };
 
