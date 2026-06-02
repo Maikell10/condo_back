@@ -669,6 +669,48 @@ const getPaidReceipts = async (req, res) => {
     }
 };
 
+const createExpenseConcept = async (req, res) => {
+    const { description } = req.body;
+
+    if (!description) {
+        return res
+            .status(400)
+            .json({ message: "La descripción del concepto es obligatoria." });
+    }
+
+    try {
+        // 1. Obtener el código máximo numérico actual (convirtiendo el string a número)
+        const [maxRes] = await db.query(
+            "SELECT MAX(CAST(code AS UNSIGNED)) as maxCode FROM expense_concepts",
+        );
+        const currentMax = maxRes[0].maxCode || 0;
+
+        // 2. Incrementar e inicializar el formato con ceros a la izquierda (3 dígitos)
+        const nextCodeNum = currentMax + 1;
+        const nextCode = String(nextCodeNum).padStart(3, "0");
+
+        // 3. Insertar el nuevo concepto en el catálogo
+        const [insertRes] = await db.query(
+            "INSERT INTO expense_concepts (code, description) VALUES (?, ?)",
+            [nextCode, description.trim()],
+        );
+
+        res.status(201).json({
+            message: "Concepto de gasto creado en el catálogo.",
+            data: {
+                id: insertRes.insertId,
+                code: nextCode,
+                description: description.trim(),
+            },
+        });
+    } catch (error) {
+        console.error("Error al crear concepto de gasto:", error);
+        res.status(500).json({
+            message: "Error interno al guardar en el catálogo.",
+        });
+    }
+};
+
 module.exports = {
     getBuildingExpenses,
     addExpense,
@@ -685,4 +727,5 @@ module.exports = {
     getOwnerReceiptPeriods,
     getOwnerReceiptDetail,
     getPaidReceipts,
+    createExpenseConcept,
 };

@@ -75,4 +75,10 @@ router.post(
     billingController.registerAdminPayment,
 );
 
+router.post(
+    "/billing/concepts",
+    authMiddleware.verifyToken,
+    billingController.createExpenseConcept,
+);
+
 module.exports = router;
