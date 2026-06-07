@@ -147,11 +147,9 @@ const createBankAccount = async (req, res) => {
             );
 
             if (buildings.length === 0) {
-                return res
-                    .status(404)
-                    .json({
-                        message: "No hay edificios activos en este conjunto.",
-                    });
+                return res.status(404).json({
+                    message: "No hay edificios activos en este conjunto.",
+                });
             }
 
             // 2. Preparamos la data para el "Bulk Insert" (Insertar múltiples filas de golpe)
@@ -174,11 +172,9 @@ const createBankAccount = async (req, res) => {
                 [values], // Nota: En una inserción bulk con MySQL2, se pasa el array anidado dentro de un array
             );
 
-            return res
-                .status(201)
-                .json({
-                    message: `Cuenta registrada exitosamente en ${buildings.length} edificios.`,
-                });
+            return res.status(201).json({
+                message: `Cuenta registrada exitosamente en ${buildings.length} edificios.`,
+            });
         }
 
         // LÓGICA NORMAL (UN SOLO EDIFICIO)

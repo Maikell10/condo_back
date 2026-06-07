@@ -95,10 +95,12 @@ const getDashboardStats = async (req, res) => {
         const [featured] = await db.query(
             `
             SELECT a.number, u.name as ownerName, 
-                   COALESCE(SUM(r.amount - r.paid), 0) as balance
+                b.name as buildingName,
+                COALESCE(SUM(r.amount - r.paid), 0) as balance
             FROM apartments a
             LEFT JOIN users u ON a.owner_id = u.id
             JOIN receipts r ON a.id = r.apartment_id
+            JOIN buildings b ON a.building_id = b.id
             WHERE a.${filterApartments} AND r.status IN ('PENDING', 'PARTIAL')
             GROUP BY a.id
             ORDER BY balance DESC LIMIT 4
