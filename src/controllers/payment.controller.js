@@ -11,6 +11,16 @@ const reportPayment = async (req, res) => {
     const userId = req.user.id; // Extraído por el middleware verifyToken
 
     try {
+        // --- 🔒 CANDADO 1: Evitar fechas en el futuro ---
+        const paymentDateObj = new Date(operationDate);
+        const today = new Date();
+        if (paymentDateObj > today) {
+            return res.status(400).json({
+                message:
+                    "Operación rechazada: La fecha de la operación no puede ser en el futuro.",
+            });
+        }
+
         // 1. Buscamos el apartment_id asociado a este propietario
         const [apartments] = await db.query(
             "SELECT id FROM apartments WHERE owner_id = ?",
@@ -25,6 +35,19 @@ const reportPayment = async (req, res) => {
         }
 
         const apartmentId = apartments[0].id;
+
+        // --- 🔒 CANDADO 2: Evitar pagos duplicados (Referencia + Banco) ---
+        const [existingPayment] = await db.query(
+            `SELECT id FROM payments WHERE reference = ? AND bank_account = ? AND apartment_id = ?`,
+            [referenceNumber, bankAccount, apartmentId],
+        );
+
+        if (existingPayment.length > 0) {
+            return res.status(400).json({
+                message:
+                    "Error: Ya existe un reporte de pago con este número de referencia a esta cuenta bancaria.",
+            });
+        }
 
         // 2. Insertamos el reporte de pago
         const query = `

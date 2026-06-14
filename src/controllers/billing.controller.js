@@ -418,6 +418,31 @@ const registerAdminPayment = async (req, res) => {
     } = req.body;
 
     try {
+        // --- 🔒 CANDADO 1: Evitar fechas en el futuro ---
+        const paymentDateObj = new Date(paymentDate);
+        const today = new Date();
+        if (paymentDateObj > today) {
+            return res.status(400).json({
+                message:
+                    "Operación rechazada: La fecha del pago no puede ser en el futuro.",
+            });
+        }
+
+        // --- 🔒 CANDADO 2: Evitar pagos duplicados (Referencia + Banco) ---
+        const [existingPayment] = await db.query(
+            `SELECT id FROM payments WHERE reference = ? AND bank_account = ? AND apartment_id = ?`,
+            [reference, bankAccountId, apartmentId],
+        );
+
+        if (existingPayment.length > 0) {
+            return res.status(400).json({
+                message:
+                    "Error: Ya existe un pago registrado con este número de referencia en esta cuenta bancaria.",
+            });
+        }
+
+        // --- FLUJO NORMAL DE REGISTRO ---
+
         // 1. Obtener la información actual del recibo para matemáticas precisas
         const [receipts] = await db.query(
             "SELECT amount, paid FROM receipts WHERE id = ?",
@@ -652,10 +677,16 @@ const getPaidReceipts = async (req, res) => {
                 r.status,
                 r.issue_date,
                 a.number as apartmentNumber,
-                b.name as buildingName
+                b.name as buildingName,
+                -- 🔥 CAMPOS NUEVOS NECESARIOS PARA EL MODAL:
+                a.id as apartmentId,
+                a.access_code,
+                a.alicuota,
+                u.name as ownerName
             FROM receipts r
             JOIN apartments a ON r.apartment_id = a.id
             JOIN buildings b ON a.building_id = b.id
+            LEFT JOIN users u ON a.owner_id = u.id
             WHERE a.owner_id = ? AND r.status = 'PAID'
             ORDER BY r.issue_date DESC
         `;
