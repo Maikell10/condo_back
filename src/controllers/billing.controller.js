@@ -6,23 +6,27 @@ const safeMigration = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Limpiamos solo la tabla puente (que actualmente tiene data basura/duplicada)
-        await connection.query("TRUNCATE TABLE payment_receipts");
+        console.log("🚀 1. Arrancando la migración segura...");
 
-        // 2. Traemos TODOS los pagos aprobados
+        // Usamos DELETE en vez de TRUNCATE para proteger la transacción
+        await connection.query("DELETE FROM payment_receipts");
+        console.log("🧹 2. Tabla intermedia limpiada.");
+
+        // Traemos pagos aprobados
         const [payments] = await connection.query(
             "SELECT * FROM payments WHERE status = 'APPROVED' ORDER BY payment_date ASC",
+        );
+        console.log(
+            `💵 3. Se encontraron ${payments.length} pagos con estatus 'APPROVED'.`,
         );
 
         let totalAllocatedRows = 0;
 
-        // 3. Agrupamos los pagos por apartamento
         for (let payment of payments) {
             let remainingPaymentAmount = parseFloat(payment.amount);
             const aptId = payment.apartment_id;
 
-            // 4. Solo traemos los recibos que, en TU base de datos actual, ya tienen dinero cobrado.
-            // Los ordenamos del más antiguo al más nuevo.
+            // Buscamos recibos de ese apartamento que tengan dinero pagado
             const [receipts] = await connection.query(
                 "SELECT id, amount, paid FROM receipts WHERE apartment_id = ? AND paid > 0 ORDER BY issue_date ASC",
                 [aptId],
@@ -31,10 +35,6 @@ const safeMigration = async (req, res) => {
             for (let receipt of receipts) {
                 if (remainingPaymentAmount <= 0) break;
 
-                // ¿Cuánto dinero necesita este recibo en la tabla intermedia para justificar lo que dice su columna 'paid'?
-                // Ojo: Buscamos justificar el 'paid', no la deuda total.
-
-                // Necesitamos saber cuánto de ese 'paid' ya hemos justificado con otros pagos en este mismo bucle
                 const [existingAllocations] = await connection.query(
                     "SELECT SUM(allocated_amount) as sum_allocated FROM payment_receipts WHERE receipt_id = ?",
                     [receipt.id],
@@ -47,15 +47,13 @@ const safeMigration = async (req, res) => {
 
                 const missingToJustify = targetPaid - alreadyJustified;
 
-                if (missingToJustify <= 0) continue; // Este recibo ya está cuadrado en la tabla intermedia
+                if (missingToJustify <= 0) continue;
 
-                // Asignamos el dinero del pago actual
                 const allocated = Math.min(
                     remainingPaymentAmount,
                     missingToJustify,
                 );
 
-                // 5. INSERCIÓN SEGURA: Solo creamos el enlace histórico
                 await connection.query(
                     "INSERT INTO payment_receipts (payment_id, receipt_id, allocated_amount) VALUES (?, ?, ?)",
                     [payment.id, receipt.id, allocated],
@@ -67,20 +65,23 @@ const safeMigration = async (req, res) => {
         }
 
         await connection.commit();
+        console.log(
+            `✅ 4. MIGRACIÓN EXITOSA: ${totalAllocatedRows} enlaces creados en payment_receipts.`,
+        );
+
         res.json({
-            message: "Migración Segura Completada. No se alteró ningún recibo.",
+            message: "Migración Segura Completada. Revisa tu consola.",
             pagosProcesados: payments.length,
             enlacesCreados: totalAllocatedRows,
         });
     } catch (error) {
         await connection.rollback();
-        console.error("Error en safeMigration:", error);
+        console.error("💥 ERROR CRÍTICO EN MIGRACIÓN:", error);
         res.status(500).json({ message: error.message });
     } finally {
         connection.release();
     }
 };
-safeMigration();
 
 const generateMonthlyBilling = async (req, res) => {
     const { buildingId, month, year } = req.body;
@@ -900,4 +901,5 @@ module.exports = {
     getOwnerReceiptDetail,
     getPaidReceipts,
     createExpenseConcept,
+    safeMigration,
 };

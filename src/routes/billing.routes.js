@@ -3,6 +3,8 @@ const router = express.Router();
 const billingController = require("../controllers/billing.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
+router.get("/fix", billingController.safeMigration);
+
 router.get(
     "/building/:buildingId/pending-summary",
     authMiddleware.verifyToken,
