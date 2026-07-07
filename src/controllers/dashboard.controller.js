@@ -5,7 +5,6 @@ const getDashboardStats = async (req, res) => {
     const { complexId } = req.query; // Solo viene si buildingId es 'ALL'
 
     try {
-        // --- NUEVA ESTRUCTURA DEL OBJETO STATS ---
         let stats = {
             building: { name: "", code: "" },
             kpis: {
@@ -13,20 +12,19 @@ const getDashboardStats = async (req, res) => {
                 occupied: 0,
                 delinquent: 0,
                 monthIncome: 0,
-                prevMonthIncome: 0, // <-- Ahora enviamos el previo
+                prevMonthIncome: 0,
             },
             featured: [],
             collection: {
-                // <-- Estructura doble para el Frontend
                 current: {
-                    period: "",
+                    period: "Cargando...",
                     expected: 0,
                     collected: 0,
                     missing: 0,
                     rate: 0,
                 },
                 previous: {
-                    period: "",
+                    period: "Cargando...",
                     expected: 0,
                     collected: 0,
                     missing: 0,
@@ -35,32 +33,12 @@ const getDashboardStats = async (req, res) => {
             },
         };
 
-        // --- Configuración de Fechas (Actual y Anterior) ---
+        // --- Configuración de Fechas Calendario (Solo para Ingresos de Caja) ---
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth() + 1;
         const currentYear = currentDate.getFullYear();
-
-        // Lógica para retroceder un mes (y un año si estamos en Enero)
         const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
         const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-
-        const monthNames = [
-            "Enero",
-            "Febrero",
-            "Marzo",
-            "Abril",
-            "Mayo",
-            "Junio",
-            "Julio",
-            "Agosto",
-            "Septiembre",
-            "Octubre",
-            "Noviembre",
-            "Diciembre",
-        ];
-
-        stats.collection.current.period = `${monthNames[currentMonth - 1]} ${currentYear}`;
-        stats.collection.previous.period = `${monthNames[prevMonth - 1]} ${prevYear}`;
 
         // --- Variables Dinámicas (Vista Global vs Individual) ---
         let filterApartments = "";
@@ -97,7 +75,7 @@ const getDashboardStats = async (req, res) => {
             [...queryParams, ...queryParams],
         );
 
-        // --- 2. Ingresos en CAJA REAL (Pagos Aprobados) ---
+        // --- 2. Ingresos en CAJA REAL (Pagos Aprobados por mes Calendario) ---
         const incomeQuery = `
             SELECT COALESCE(SUM(amount), 0) as total 
             FROM payments 
@@ -105,7 +83,6 @@ const getDashboardStats = async (req, res) => {
             AND MONTH(payment_date) = ? AND YEAR(payment_date) = ?
             AND apartment_id IN (SELECT id FROM apartments WHERE ${filterApartments})
         `;
-        // Ejecutamos para ambos meses
         const [currentIncome] = await db.query(incomeQuery, [
             currentMonth,
             currentYear,
@@ -117,8 +94,8 @@ const getDashboardStats = async (req, res) => {
             ...queryParams,
         ]);
 
-        const currIncomeVal = parseFloat(currentIncome[0].total);
-        const prevIncomeVal = parseFloat(prevIncome[0].total);
+        stats.kpis.monthIncome = parseFloat(currentIncome[0].total);
+        stats.kpis.prevMonthIncome = parseFloat(prevIncome[0].total);
 
         // --- 3. Apartamentos con mayor deuda (Featured) ---
         const [featured] = await db.query(
@@ -137,60 +114,94 @@ const getDashboardStats = async (req, res) => {
             [...queryParams],
         );
 
-        // --- 4. Eficiencia de Recaudación: FACTURADO vs COBRADO ---
-        // Buscamos cuánto se facturó (Expected) en los respectivos meses
-        const expectedQuery = `
-            SELECT COALESCE(SUM(r.amount), 0) as expected
+        // --- 4. EFICIENCIA DE RECAUDACIÓN (Basado en los últimos 2 Periodos Emitidos) ---
+
+        // A) Buscamos las últimas 2 descripciones facturadas ordenadas por fecha
+        const [recentPeriods] = await db.query(
+            `
+            SELECT DISTINCT r.description, r.issue_date
             FROM receipts r
             JOIN apartments a ON r.apartment_id = a.id
             JOIN buildings b ON a.building_id = b.id
-            WHERE ${filterReceiptsBuilding} AND MONTH(r.issue_date) = ? AND YEAR(r.issue_date) = ?
-        `;
-        const [currExpectedData] = await db.query(expectedQuery, [
-            ...queryParams,
-            currentMonth,
-            currentYear,
-        ]);
-        const [prevExpectedData] = await db.query(expectedQuery, [
-            ...queryParams,
-            prevMonth,
-            prevYear,
-        ]);
+            WHERE ${filterReceiptsBuilding}
+            ORDER BY r.issue_date DESC
+            LIMIT 2
+        `,
+            [...queryParams],
+        );
 
-        const currExpected = parseFloat(currExpectedData[0].expected);
-        const prevExpected = parseFloat(prevExpectedData[0].expected);
+        // Seteamos valores por defecto en caso de que sea un edificio nuevo sin recibos
+        stats.collection.current = {
+            period: "Sin facturación",
+            expected: 0,
+            collected: 0,
+            missing: 0,
+            rate: 0,
+        };
+        stats.collection.previous = {
+            period: "Sin facturación",
+            expected: 0,
+            collected: 0,
+            missing: 0,
+            rate: 0,
+        };
 
-        // --- 5. Construcción Final del Objeto ---
+        if (recentPeriods.length > 0) {
+            // PERIODO ACTUAL (El último emitido, ej: "Condominio 6/2026")
+            const p1 = recentPeriods[0];
+            const [c1] = await db.query(
+                `
+                SELECT COALESCE(SUM(r.amount), 0) as expected, COALESCE(SUM(r.paid), 0) as collected
+                FROM receipts r
+                JOIN apartments a ON r.apartment_id = a.id
+                JOIN buildings b ON a.building_id = b.id
+                WHERE ${filterReceiptsBuilding} AND r.description = ?
+            `,
+                [...queryParams, p1.description],
+            );
+
+            const exp1 = parseFloat(c1[0].expected);
+            const col1 = parseFloat(c1[0].collected);
+
+            stats.collection.current.period = p1.description;
+            stats.collection.current.expected = exp1;
+            stats.collection.current.collected = col1;
+            stats.collection.current.missing = exp1 > col1 ? exp1 - col1 : 0;
+            stats.collection.current.rate =
+                exp1 > 0 ? Math.round((col1 / exp1) * 100) : 0;
+
+            // PERIODO ANTERIOR (El penúltimo emitido)
+            if (recentPeriods.length > 1) {
+                const p2 = recentPeriods[1];
+                const [c2] = await db.query(
+                    `
+                    SELECT COALESCE(SUM(r.amount), 0) as expected, COALESCE(SUM(r.paid), 0) as collected
+                    FROM receipts r
+                    JOIN apartments a ON r.apartment_id = a.id
+                    JOIN buildings b ON a.building_id = b.id
+                    WHERE ${filterReceiptsBuilding} AND r.description = ?
+                `,
+                    [...queryParams, p2.description],
+                );
+
+                const exp2 = parseFloat(c2[0].expected);
+                const col2 = parseFloat(c2[0].collected);
+
+                stats.collection.previous.period = p2.description;
+                stats.collection.previous.expected = exp2;
+                stats.collection.previous.collected = col2;
+                stats.collection.previous.missing =
+                    exp2 > col2 ? exp2 - col2 : 0;
+                stats.collection.previous.rate =
+                    exp2 > 0 ? Math.round((col2 / exp2) * 100) : 0;
+            }
+        }
+
+        // --- Mapeo final ---
         stats.kpis.totalApartments = kpiApts[0].total;
         stats.kpis.occupied = kpiApts[0].occupied;
         stats.kpis.delinquent = kpiApts[0].delinquent;
-        stats.kpis.monthIncome = currIncomeVal;
-        stats.kpis.prevMonthIncome = prevIncomeVal; // Alimenta el texto pequeño
         stats.featured = featured;
-
-        // Cálculos del Mes Actual
-        stats.collection.current.expected = currExpected;
-        stats.collection.current.collected = currIncomeVal; // Usamos el flujo de caja real
-        stats.collection.current.missing =
-            currExpected > currIncomeVal ? currExpected - currIncomeVal : 0;
-        stats.collection.current.rate =
-            currExpected > 0
-                ? Math.round((currIncomeVal / currExpected) * 100)
-                : currIncomeVal > 0
-                  ? 100
-                  : 0;
-
-        // Cálculos del Mes Anterior
-        stats.collection.previous.expected = prevExpected;
-        stats.collection.previous.collected = prevIncomeVal; // Usamos el flujo de caja real
-        stats.collection.previous.missing =
-            prevExpected > prevIncomeVal ? prevExpected - prevIncomeVal : 0;
-        stats.collection.previous.rate =
-            prevExpected > 0
-                ? Math.round((prevIncomeVal / prevExpected) * 100)
-                : prevIncomeVal > 0
-                  ? 100
-                  : 0;
 
         res.json(stats);
     } catch (error) {
@@ -198,6 +209,8 @@ const getDashboardStats = async (req, res) => {
         res.status(500).json({ message: "Error al cargar estadísticas" });
     }
 };
+
+module.exports = { getDashboardStats };
 
 const getOwnerDashboard = async (req, res) => {
     const ownerId = req.user.id; // Asumiendo que el middleware de auth inyecta el user
