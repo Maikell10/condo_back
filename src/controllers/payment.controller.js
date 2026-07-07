@@ -8,7 +8,7 @@ const reportPayment = async (req, res) => {
         amount,
         operationDate,
     } = req.body;
-    const userId = req.user.id; // Extraído por el middleware verifyToken
+    const userId = req.user.id;
 
     try {
         // --- 🔒 CANDADO 1: Evitar fechas en el futuro ---
@@ -33,7 +33,6 @@ const reportPayment = async (req, res) => {
                     "No se encontró un apartamento asociado a este usuario.",
             });
         }
-
         const apartmentId = apartments[0].id;
 
         // --- 🔒 CANDADO 2: Evitar pagos duplicados (Referencia + Banco) ---
@@ -50,20 +49,18 @@ const reportPayment = async (req, res) => {
         }
 
         // 2. Insertamos el reporte de pago
-        const query = `
-            INSERT INTO payments 
-            (apartment_id, bank_account, operation_type, reference, amount, payment_date, status) 
-            VALUES (?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL')
-        `;
-
-        await db.query(query, [
-            apartmentId,
-            bankAccount,
-            operationType,
-            referenceNumber,
-            amount,
-            operationDate, // Asegúrate de enviarla en formato YYYY-MM-DD desde Angular
-        ]);
+        await db.query(
+            `INSERT INTO payments (apartment_id, bank_account, operation_type, reference, amount, payment_date, status) 
+             VALUES (?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL')`,
+            [
+                apartmentId,
+                bankAccount,
+                operationType,
+                referenceNumber,
+                amount,
+                operationDate,
+            ],
+        );
 
         res.status(201).json({
             message:
@@ -154,36 +151,48 @@ const approvePayment = async (req, res) => {
         let remainingAmount = parseFloat(payments[0].amount);
         const apartmentId = payments[0].apartment_id;
 
-        // 2. Buscar todos los recibos pendientes ordenados por antigüedad
+        // 2. Buscar todos los recibos con deuda (PENDING o PARTIAL) ordenados por antigüedad
+        // El FOR UPDATE bloquea estas filas en la BD mientras hacemos la matemática
         const [receipts] = await connection.query(
-            "SELECT id, amount, paid FROM receipts WHERE apartment_id = ? AND status = 'PENDING' ORDER BY issue_date ASC",
+            "SELECT id, amount, paid FROM receipts WHERE apartment_id = ? AND status IN ('PENDING', 'PARTIAL') ORDER BY issue_date ASC FOR UPDATE",
             [apartmentId],
         );
 
-        // 3. PROCESO DE CASCADA
+        // 3. PROCESO DE CASCADA (FIFO)
         for (let receipt of receipts) {
-            if (remainingAmount <= 0) break;
+            if (remainingAmount <= 0) break; // Si se agotó el dinero, salimos
 
             const totalAmount = parseFloat(receipt.amount);
             const alreadyPaid = parseFloat(receipt.paid || 0);
             const pendingOnThisReceipt = totalAmount - alreadyPaid;
 
-            if (remainingAmount >= pendingOnThisReceipt) {
-                // El pago cubre este recibo totalmente (o es mayor)
-                await connection.query(
-                    "UPDATE receipts SET paid = ?, status = 'PAID' WHERE id = ?",
-                    [totalAmount, receipt.id],
-                );
-                remainingAmount -= pendingOnThisReceipt;
-            } else {
-                // Pago parcial: El dinero no alcanza para cerrar el recibo
-                const newPaidAmount = alreadyPaid + remainingAmount;
-                await connection.query(
-                    "UPDATE receipts SET paid = ? WHERE id = ?",
-                    [newPaidAmount, receipt.id],
-                );
-                remainingAmount = 0; // Se agotó el dinero
-            }
+            if (pendingOnThisReceipt <= 0) continue; // Seguro por si acaso
+
+            // Calculamos cuánto dinero se le va a inyectar a este recibo
+            const allocated = Math.min(remainingAmount, pendingOnThisReceipt);
+
+            // A) Insertamos en la tabla intermedia (El cruce contable)
+            await connection.query(
+                "INSERT INTO payment_receipts (payment_id, receipt_id, allocated_amount) VALUES (?, ?, ?)",
+                [id, receipt.id, allocated],
+            );
+
+            // B) Actualizamos el recibo
+            const newPaidAmount = alreadyPaid + allocated;
+
+            // Evaluamos si con este abono se pagó completo o quedó parcial
+            // Usamos .toFixed(2) para curarnos en salud con los decimales falsos de JavaScript
+            const isFullyPaid =
+                newPaidAmount.toFixed(2) >= totalAmount.toFixed(2);
+            const newStatus = isFullyPaid ? "PAID" : "PARTIAL";
+
+            await connection.query(
+                "UPDATE receipts SET paid = ?, status = ? WHERE id = ?",
+                [newPaidAmount, newStatus, receipt.id],
+            );
+
+            // Restamos lo usado al pozo de dinero del pago
+            remainingAmount -= allocated;
         }
 
         // 4. Marcar el reporte de pago como APROBADO
@@ -197,7 +206,7 @@ const approvePayment = async (req, res) => {
             message: "Pago procesado y aplicado a la deuda exitosamente",
         });
     } catch (error) {
-        console.log(error);
+        console.log("Error en approvePayment:", error);
         await connection.rollback();
         res.status(500).json({ message: error.message });
     } finally {

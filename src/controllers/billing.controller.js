@@ -1,67 +1,86 @@
 const db = require("../db");
 
-const migrateData = async () => {
-    // 1. Buscamos todos los apartamentos que tengan pagos aprobados
-    const [apartments] = await db.query(
-        `SELECT DISTINCT apartment_id FROM payments WHERE status = 'APPROVED'`,
-    );
+const safeMigration = async (req, res) => {
+    const connection = await db.getConnection();
 
-    for (let apt of apartments) {
-        const aptId = apt.apartment_id;
+    try {
+        await connection.beginTransaction();
 
-        // 2. Traemos los pagos de este apartamento (Del más viejo al más nuevo)
-        const [payments] = await db.query(
-            `SELECT id, amount FROM payments WHERE apartment_id = ? AND status = 'APPROVED' ORDER BY payment_date ASC`,
-            [aptId],
+        // 1. Limpiamos solo la tabla puente (que actualmente tiene data basura/duplicada)
+        await connection.query("TRUNCATE TABLE payment_receipts");
+
+        // 2. Traemos TODOS los pagos aprobados
+        const [payments] = await connection.query(
+            "SELECT * FROM payments WHERE status = 'APPROVED' ORDER BY payment_date ASC",
         );
 
-        // 3. Traemos los recibos de este apartamento (Del más viejo al más nuevo)
-        const [receipts] = await db.query(
-            `SELECT id, amount, paid FROM receipts WHERE apartment_id = ? ORDER BY issue_date ASC`,
-            [aptId],
-        );
+        let totalAllocatedRows = 0;
 
-        let currentReceiptIndex = 0;
-
-        // 4. Distribuimos el dinero de cada pago
+        // 3. Agrupamos los pagos por apartamento
         for (let payment of payments) {
-            let remainingPayment = Number(payment.amount);
+            let remainingPaymentAmount = parseFloat(payment.amount);
+            const aptId = payment.apartment_id;
 
-            while (
-                remainingPayment > 0 &&
-                currentReceiptIndex < receipts.length
-            ) {
-                let receipt = receipts[currentReceiptIndex];
-                let receiptDebt = Number(receipt.amount) - Number(receipt.paid);
+            // 4. Solo traemos los recibos que, en TU base de datos actual, ya tienen dinero cobrado.
+            // Los ordenamos del más antiguo al más nuevo.
+            const [receipts] = await connection.query(
+                "SELECT id, amount, paid FROM receipts WHERE apartment_id = ? AND paid > 0 ORDER BY issue_date ASC",
+                [aptId],
+            );
 
-                if (receiptDebt <= 0) {
-                    currentReceiptIndex++; // Este recibo ya está pagado, pasamos al siguiente
-                    continue;
-                }
+            for (let receipt of receipts) {
+                if (remainingPaymentAmount <= 0) break;
 
-                // Calculamos cuánto de este pago se va a este recibo
-                let amountToAllocate = Math.min(remainingPayment, receiptDebt);
+                // ¿Cuánto dinero necesita este recibo en la tabla intermedia para justificar lo que dice su columna 'paid'?
+                // Ojo: Buscamos justificar el 'paid', no la deuda total.
 
-                // Insertamos en la nueva tabla intermedia
-                await db.query(
-                    `INSERT INTO payment_receipts (payment_id, receipt_id, allocated_amount) VALUES (?, ?, ?)`,
-                    [payment.id, receipt.id, amountToAllocate],
+                // Necesitamos saber cuánto de ese 'paid' ya hemos justificado con otros pagos en este mismo bucle
+                const [existingAllocations] = await connection.query(
+                    "SELECT SUM(allocated_amount) as sum_allocated FROM payment_receipts WHERE receipt_id = ?",
+                    [receipt.id],
                 );
 
-                // Actualizamos las variables temporales
-                remainingPayment -= amountToAllocate;
-                receipt.paid = Number(receipt.paid) + amountToAllocate;
+                const alreadyJustified = parseFloat(
+                    existingAllocations[0].sum_allocated || 0,
+                );
+                const targetPaid = parseFloat(receipt.paid);
 
-                // Si el recibo se pagó completo, avanzamos al siguiente para el resto del dinero
-                if (Number(receipt.paid) >= Number(receipt.amount)) {
-                    currentReceiptIndex++;
-                }
+                const missingToJustify = targetPaid - alreadyJustified;
+
+                if (missingToJustify <= 0) continue; // Este recibo ya está cuadrado en la tabla intermedia
+
+                // Asignamos el dinero del pago actual
+                const allocated = Math.min(
+                    remainingPaymentAmount,
+                    missingToJustify,
+                );
+
+                // 5. INSERCIÓN SEGURA: Solo creamos el enlace histórico
+                await connection.query(
+                    "INSERT INTO payment_receipts (payment_id, receipt_id, allocated_amount) VALUES (?, ?, ?)",
+                    [payment.id, receipt.id, allocated],
+                );
+
+                totalAllocatedRows++;
+                remainingPaymentAmount -= allocated;
             }
         }
+
+        await connection.commit();
+        res.json({
+            message: "Migración Segura Completada. No se alteró ningún recibo.",
+            pagosProcesados: payments.length,
+            enlacesCreados: totalAllocatedRows,
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error("Error en safeMigration:", error);
+        res.status(500).json({ message: error.message });
+    } finally {
+        connection.release();
     }
-    console.log("¡Migración completada con éxito! 🎉");
 };
-migrateData();
+safeMigration();
 
 const generateMonthlyBilling = async (req, res) => {
     const { buildingId, month, year } = req.body;
@@ -485,7 +504,6 @@ const getStatements = async (req, res) => {
 
 const registerAdminPayment = async (req, res) => {
     const {
-        receiptId,
         apartmentId,
         bankAccountId,
         operationType,
@@ -493,52 +511,44 @@ const registerAdminPayment = async (req, res) => {
         amount,
         paymentDate,
     } = req.body;
+    // Omitimos receiptId intencionalmente para forzar el pago a la deuda más vieja (FIFO)
+
+    // Solicitamos una conexión dedicada para manejar la Transacción
+    const connection = await db.getConnection();
 
     try {
         // --- 🔒 CANDADO 1: Evitar fechas en el futuro ---
         const paymentDateObj = new Date(paymentDate);
         const today = new Date();
         if (paymentDateObj > today) {
+            connection.release();
             return res.status(400).json({
                 message:
                     "Operación rechazada: La fecha del pago no puede ser en el futuro.",
             });
         }
 
-        // --- 🔒 CANDADO 2: Evitar pagos duplicados (Referencia + Banco) ---
-        const [existingPayment] = await db.query(
+        // --- 🔒 CANDADO 2: Evitar pagos duplicados ---
+        const [existingPayment] = await connection.query(
             `SELECT id FROM payments WHERE reference = ? AND bank_account = ? AND apartment_id = ?`,
             [reference, bankAccountId, apartmentId],
         );
 
         if (existingPayment.length > 0) {
+            connection.release();
             return res.status(400).json({
                 message:
-                    "Error: Ya existe un pago registrado con este número de referencia en esta cuenta bancaria.",
+                    "Error: Ya existe un pago registrado con este número de referencia.",
             });
         }
 
-        // --- FLUJO NORMAL DE REGISTRO ---
+        // ==========================================
+        // INICIA LA TRANSACCIÓN FINANCIERA (FIFO)
+        // ==========================================
+        await connection.beginTransaction();
 
-        // 1. Obtener la información actual del recibo para matemáticas precisas
-        const [receipts] = await db.query(
-            "SELECT amount, paid FROM receipts WHERE id = ?",
-            [receiptId],
-        );
-        if (receipts.length === 0)
-            return res.status(404).json({ message: "Recibo no encontrado" });
-
-        const receipt = receipts[0];
-
-        // Sumamos lo que ya tenía pagado + el nuevo abono
-        const newPaid = parseFloat(receipt.paid) + parseFloat(amount);
-
-        // Si lo pagado alcanza o supera el total, se marca PAID, sino PARTIAL
-        const newStatus =
-            newPaid >= parseFloat(receipt.amount) ? "PAID" : "PARTIAL";
-
-        // 2. Insertar el pago en la tabla payments (entra directamente como APPROVED)
-        await db.query(
+        // 1. Insertamos el pago aprobado
+        const [paymentResult] = await connection.query(
             `INSERT INTO payments (apartment_id, bank_account, operation_type, reference, amount, payment_date, status)
              VALUES (?, ?, ?, ?, ?, ?, 'APPROVED')`,
             [
@@ -550,19 +560,73 @@ const registerAdminPayment = async (req, res) => {
                 paymentDate,
             ],
         );
+        const paymentId = paymentResult.insertId;
 
-        // 3. Actualizar los montos y el estado en el recibo
-        await db.query(
-            `UPDATE receipts SET paid = ?, status = ? WHERE id = ?`,
-            [newPaid, newStatus, receiptId],
+        // 2. Traemos todos los recibos pendientes de este apartamento (Del más viejo al más nuevo)
+        // El "FOR UPDATE" bloquea las filas para que nadie más las modifique mientras hacemos la matemática
+        const [receipts] = await connection.query(
+            `SELECT id, amount, paid FROM receipts 
+             WHERE apartment_id = ? AND status IN ('PENDING', 'PARTIAL') 
+             ORDER BY issue_date ASC FOR UPDATE`,
+            [apartmentId],
         );
 
+        let remainingAmount = parseFloat(amount);
+
+        // 3. Bucle para repartir el dinero
+        for (let receipt of receipts) {
+            if (remainingAmount <= 0) break; // Si ya se nos acabó el dinero, salimos del bucle
+
+            const receiptAmount = parseFloat(receipt.amount);
+            const currentPaid = parseFloat(receipt.paid);
+            const debt = receiptAmount - currentPaid;
+
+            if (debt <= 0) continue; // Por seguridad, si no debe nada, saltamos al siguiente
+
+            // Calculamos cuánto le vamos a abonar a este recibo
+            const allocated = Math.min(remainingAmount, debt);
+
+            // A) Registramos el cruce en la tabla intermedia
+            await connection.query(
+                `INSERT INTO payment_receipts (payment_id, receipt_id, allocated_amount) VALUES (?, ?, ?)`,
+                [paymentId, receipt.id, allocated],
+            );
+
+            // B) Actualizamos los montos y estatus del recibo
+            const newPaid = currentPaid + allocated;
+
+            // Usamos .toFixed(2) para evitar problemas de decimales (ej. 100.00000001)
+            const isFullyPaid = newPaid.toFixed(2) >= receiptAmount.toFixed(2);
+            const newStatus = isFullyPaid ? "PAID" : "PARTIAL";
+
+            await connection.query(
+                `UPDATE receipts SET paid = ?, status = ? WHERE id = ?`,
+                [newPaid, newStatus, receipt.id],
+            );
+
+            // Descontamos del dinero que nos queda en la mano
+            remainingAmount -= allocated;
+        }
+
+        // Si después del bucle remainingAmount > 0, ese dinero queda como saldo a favor en la tabla payments
+
+        // Si todo salió perfecto, confirmamos los cambios en la base de datos
+        await connection.commit();
         res.json({
-            message: "Pago registrado exitosamente y recibo actualizado.",
+            message:
+                "Pago registrado y distribuido exitosamente a las deudas más antiguas.",
         });
     } catch (error) {
+        // Si ALGO falló en las matemáticas o la base de datos, revertimos TODO
+        await connection.rollback();
         console.error("Error en registerAdminPayment:", error);
-        res.status(500).json({ message: "Error al procesar el pago." });
+        res.status(500).json({
+            message:
+                "Error crítico al procesar el pago. Transacción revertida.",
+        });
+    } finally {
+        // Liberamos la conexión para que otros usuarios la puedan usar
+        if (connection) connection.release();
     }
 };
 
