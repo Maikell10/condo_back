@@ -371,7 +371,12 @@ const getStatements = async (req, res) => {
                        r.amount, r.paid, (r.amount - r.paid) as balance, 
                        r.status, r.description,
                        a.number as apartment, u.name as ownerName, b.name as buildingName,
-                       a.id as apartmentId, a.building_id as buildingId
+                       a.id as apartmentId, a.building_id as buildingId,
+                       
+                       -- 🔥 NUEVO: Traemos la fecha del último pago realizado a este recibo
+                       (SELECT DATE_FORMAT(MAX(payment_date), '%Y-%m-%d') 
+                        FROM payments p WHERE p.receipt_id = r.id) as paymentDate
+
                 FROM receipts r
                 JOIN apartments a ON r.apartment_id = a.id
                 JOIN buildings b ON a.building_id = b.id
@@ -386,7 +391,12 @@ const getStatements = async (req, res) => {
                 SELECT r.id, DATE_FORMAT(r.issue_date, '%Y-%m-%d') as issueDate, 
                        r.amount, r.paid, (r.amount - r.paid) as balance, 
                        r.status, r.description,
-                       a.number as apartment, u.name as ownerName
+                       a.number as apartment, u.name as ownerName,
+
+                       -- 🔥 NUEVO: Traemos la fecha del último pago realizado a este recibo
+                       (SELECT DATE_FORMAT(MAX(payment_date), '%Y-%m-%d') 
+                        FROM payments p WHERE p.receipt_id = r.id) as paymentDate
+
                 FROM receipts r
                 JOIN apartments a ON r.apartment_id = a.id
                 LEFT JOIN users u ON a.owner_id = u.id
