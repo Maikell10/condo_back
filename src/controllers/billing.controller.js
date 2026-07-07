@@ -1,5 +1,68 @@
 const db = require("../db");
 
+const migrateData = async () => {
+    // 1. Buscamos todos los apartamentos que tengan pagos aprobados
+    const [apartments] = await db.query(
+        `SELECT DISTINCT apartment_id FROM payments WHERE status = 'APPROVED'`,
+    );
+
+    for (let apt of apartments) {
+        const aptId = apt.apartment_id;
+
+        // 2. Traemos los pagos de este apartamento (Del más viejo al más nuevo)
+        const [payments] = await db.query(
+            `SELECT id, amount FROM payments WHERE apartment_id = ? AND status = 'APPROVED' ORDER BY payment_date ASC`,
+            [aptId],
+        );
+
+        // 3. Traemos los recibos de este apartamento (Del más viejo al más nuevo)
+        const [receipts] = await db.query(
+            `SELECT id, amount, paid FROM receipts WHERE apartment_id = ? ORDER BY issue_date ASC`,
+            [aptId],
+        );
+
+        let currentReceiptIndex = 0;
+
+        // 4. Distribuimos el dinero de cada pago
+        for (let payment of payments) {
+            let remainingPayment = Number(payment.amount);
+
+            while (
+                remainingPayment > 0 &&
+                currentReceiptIndex < receipts.length
+            ) {
+                let receipt = receipts[currentReceiptIndex];
+                let receiptDebt = Number(receipt.amount) - Number(receipt.paid);
+
+                if (receiptDebt <= 0) {
+                    currentReceiptIndex++; // Este recibo ya está pagado, pasamos al siguiente
+                    continue;
+                }
+
+                // Calculamos cuánto de este pago se va a este recibo
+                let amountToAllocate = Math.min(remainingPayment, receiptDebt);
+
+                // Insertamos en la nueva tabla intermedia
+                await db.query(
+                    `INSERT INTO payment_receipts (payment_id, receipt_id, allocated_amount) VALUES (?, ?, ?)`,
+                    [payment.id, receipt.id, amountToAllocate],
+                );
+
+                // Actualizamos las variables temporales
+                remainingPayment -= amountToAllocate;
+                receipt.paid = Number(receipt.paid) + amountToAllocate;
+
+                // Si el recibo se pagó completo, avanzamos al siguiente para el resto del dinero
+                if (Number(receipt.paid) >= Number(receipt.amount)) {
+                    currentReceiptIndex++;
+                }
+            }
+        }
+    }
+    console.log("¡Migración completada con éxito! 🎉");
+};
+migrateData();
+
 const generateMonthlyBilling = async (req, res) => {
     const { buildingId, month, year } = req.body;
     const connection = await db.getConnection();
@@ -373,9 +436,11 @@ const getStatements = async (req, res) => {
                        a.number as apartment, u.name as ownerName, b.name as buildingName,
                        a.id as apartmentId, a.building_id as buildingId,
                        
-                       -- 🔥 NUEVO: Traemos la fecha del último pago realizado a este recibo
-                       (SELECT DATE_FORMAT(MAX(payment_date), '%Y-%m-%d') 
-                        FROM payments p WHERE p.receipt_id = r.id) as paymentDate
+                       -- BÚSQUEDA CORREGIDA: Buscamos la fecha máxima a través de la tabla intermedia payment_receipts
+                       (SELECT DATE_FORMAT(MAX(p.payment_date), '%Y-%m-%d') 
+                        FROM payments p 
+                        JOIN payment_receipts pr ON p.id = pr.payment_id 
+                        WHERE pr.receipt_id = r.id AND p.status = 'APPROVED') as paymentDate
 
                 FROM receipts r
                 JOIN apartments a ON r.apartment_id = a.id
@@ -393,9 +458,11 @@ const getStatements = async (req, res) => {
                        r.status, r.description,
                        a.number as apartment, u.name as ownerName,
 
-                       -- 🔥 NUEVO: Traemos la fecha del último pago realizado a este recibo
-                       (SELECT DATE_FORMAT(MAX(payment_date), '%Y-%m-%d') 
-                        FROM payments p WHERE p.receipt_id = r.id) as paymentDate
+                       -- BÚSQUEDA CORREGIDA: Buscamos la fecha máxima a través de la tabla intermedia payment_receipts
+                       (SELECT DATE_FORMAT(MAX(p.payment_date), '%Y-%m-%d') 
+                        FROM payments p 
+                        JOIN payment_receipts pr ON p.id = pr.payment_id 
+                        WHERE pr.receipt_id = r.id AND p.status = 'APPROVED') as paymentDate
 
                 FROM receipts r
                 JOIN apartments a ON r.apartment_id = a.id
