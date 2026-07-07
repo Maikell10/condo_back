@@ -14,6 +14,7 @@ const contractRoutes = require("./contract.routes");
 const dashboardtRoutes = require("./dashboard.routes");
 const adminRoutes = require("./admin.routes");
 const auditRoutes = require("./audit.routes");
+const contactRoutes = require("./contact.routes");
 
 // Definir los prefijos para cada grupo de rutas
 router.use("/auth", authRoutes);
@@ -28,6 +29,7 @@ router.use("/contracts", contractRoutes);
 router.use("/dashboard", dashboardtRoutes);
 router.use("/admin", adminRoutes);
 router.use("/audit", auditRoutes);
+router.use("/contact", contactRoutes);
 
 // A futuro cuando crees más módulos, solo los agregas aquí:
 // const buildingRoutes = require('./building.routes');
