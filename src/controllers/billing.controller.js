@@ -748,9 +748,11 @@ const getOwnerReceiptPeriods = async (req, res) => {
                 MONTH(r.issue_date) as month, 
                 YEAR(r.issue_date) as year,
                 r.status,
-                a.access_code
+                a.access_code,
+                b.name as buildingName
             FROM receipts r
             JOIN apartments a ON r.apartment_id = a.id
+            JOIN buildings b ON a.building_id = b.id
             WHERE a.owner_id = ?
             ORDER BY year DESC, month DESC, a.number ASC
         `;
