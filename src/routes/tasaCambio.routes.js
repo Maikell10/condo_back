@@ -3,7 +3,7 @@ const router = express.Router();
 const tasaCambioController = require("../controllers/tasaCambio.controller");
 
 // Creamos un endpoint para que Vercel lo ejecute externamente
-router.get("/api/cron/update-tasa", async (req, res) => {
+router.get("/cron/update-tasa", async (req, res) => {
     try {
         console.log("[VERCEL CRON] Petición externa recibida de Vercel...");
         await tasaCambioController.setTasaBCV();
