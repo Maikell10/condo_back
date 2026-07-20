@@ -79,9 +79,10 @@ const setTasaBCV = async (req, res) => {
 const getTasa = async (req, res) => {
     try {
         const query = `
-            SELECT rate, rate_date FROM exchange_rates WHERE currency = 'USD' LIMIT 1;
+            SELECT rate, rate_date FROM exchange_rates WHERE currency = 'USD' LIMIT 1
         `;
-        const [tasa] = await db.query(query);
+        const [tasa] = await pool.query(query);
+
         res.json({ data: tasa });
     } catch (error) {
         res.status(500).json({ message: "Error al obtener la tasa" });
