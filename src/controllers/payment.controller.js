@@ -7,6 +7,9 @@ const reportPayment = async (req, res) => {
         referenceNumber,
         amount,
         operationDate,
+        currency = "USD", // Si no viene, asume USD
+        exchangeRate = 1.0, // Si no viene, asume tasa 1.0
+        amountLocal = null, // Monto en la moneda local (ej. Bolívares)
     } = req.body;
     const userId = req.user.id;
 
@@ -49,18 +52,33 @@ const reportPayment = async (req, res) => {
         }
 
         // 2. Insertamos el reporte de pago
-        await db.query(
-            `INSERT INTO payments (apartment_id, bank_account, operation_type, reference, amount, payment_date, status) 
-             VALUES (?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL')`,
-            [
-                apartmentId,
-                bankAccount,
-                operationType,
-                referenceNumber,
-                amount,
-                operationDate,
-            ],
-        );
+        const insertQuery = `
+            INSERT INTO payments (
+                apartment_id, 
+                bank_account, 
+                operation_type, 
+                reference, 
+                amount, 
+                currency, 
+                exchange_rate, 
+                amount_local, 
+                payment_date, 
+                status
+            ) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL')
+        `;
+
+        await db.query(insertQuery, [
+            apartmentId,
+            bankAccount,
+            operationType,
+            referenceNumber,
+            amount, // El monto en USD
+            currency, // 'VES' o 'USD'
+            parseFloat(exchangeRate), // Ej. 736.9339
+            amountLocal ? parseFloat(amountLocal) : amount, // El equivalente en Bs.
+            operationDate,
+        ]);
 
         res.status(201).json({
             message:
