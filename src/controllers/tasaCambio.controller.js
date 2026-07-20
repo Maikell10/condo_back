@@ -81,10 +81,19 @@ const getTasa = async (req, res) => {
         const query = `
             SELECT rate, rate_date FROM exchange_rates WHERE currency = 'USD' LIMIT 1
         `;
-        const [tasa] = await pool.query(query);
+        // [rows] extrae el array de filas de la respuesta de mysql2
+        const [rows] = await pool.query(query);
 
-        res.json({ data: tasa });
+        if (!rows || rows.length === 0) {
+            return res
+                .status(404)
+                .json({ message: "No se encontró la tasa de cambio USD" });
+        }
+
+        // Devolvemos la primera fila encontrada como un objeto directo
+        res.json({ data: rows[0] });
     } catch (error) {
+        console.error("Error en getTasa:", error);
         res.status(500).json({ message: "Error al obtener la tasa" });
     }
 };
