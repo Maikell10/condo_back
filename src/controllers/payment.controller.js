@@ -130,7 +130,11 @@ const getBuildingPayments = async (req, res) => {
                 p.status, 
                 p.bank_account as method, 
                 p.reference,
-                b.name as buildingName 
+                b.name as buildingName,
+                p.currency,
+                p.exchange_rate,
+                p.amount_local,
+                p.payment_date
             FROM payments p
             JOIN apartments a ON p.apartment_id = a.id
             JOIN buildings b ON a.building_id = b.id
