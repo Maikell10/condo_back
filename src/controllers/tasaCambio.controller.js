@@ -3,6 +3,28 @@ const moment = require("moment");
 const axios = require("axios");
 const https = require("https");
 
+const getTasa = async (req, res) => {
+    try {
+        const query = `
+            SELECT rate, rate_date FROM exchange_rates WHERE currency = 'USD' LIMIT 1
+        `;
+        // [rows] extrae el array de filas de la respuesta de mysql2
+        const [rows] = await pool.query(query);
+
+        if (!rows || rows.length === 0) {
+            return res
+                .status(404)
+                .json({ message: "No se encontró la tasa de cambio USD" });
+        }
+
+        // Devolvemos la primera fila encontrada como un objeto directo
+        res.json({ data: rows[0] });
+    } catch (error) {
+        console.error("Error en getTasa:", error);
+        res.status(500).json({ message: "Error al obtener la tasa" });
+    }
+};
+
 const setTasaBCV = async (req, res) => {
     try {
         const httpsAgent = new https.Agent({
@@ -76,29 +98,7 @@ const setTasaBCV = async (req, res) => {
     }
 };
 
-const getTasa = async (req, res) => {
-    try {
-        const query = `
-            SELECT rate, rate_date FROM exchange_rates WHERE currency = 'USD' LIMIT 1
-        `;
-        // [rows] extrae el array de filas de la respuesta de mysql2
-        const [rows] = await pool.query(query);
-
-        if (!rows || rows.length === 0) {
-            return res
-                .status(404)
-                .json({ message: "No se encontró la tasa de cambio USD" });
-        }
-
-        // Devolvemos la primera fila encontrada como un objeto directo
-        res.json({ data: rows[0] });
-    } catch (error) {
-        console.error("Error en getTasa:", error);
-        res.status(500).json({ message: "Error al obtener la tasa" });
-    }
-};
-
 module.exports = {
-    setTasaBCV,
     getTasa,
+    setTasaBCV,
 };
