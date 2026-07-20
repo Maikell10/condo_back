@@ -16,4 +16,6 @@ router.get("/cron/update-tasa", async (req, res) => {
     }
 });
 
+router.get("/getTasa", tasaCambioController.getTasa);
+
 module.exports = router;

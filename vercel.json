@@ -14,7 +14,7 @@
     ],
     "crons": [
         {
-            "path": "/tasa/cron/update-tasa",
+            "path": "/api/tasa/cron/update-tasa",
             "schedule": "0 23 * * *"
         }
     ]
