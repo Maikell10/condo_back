@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const tasaCambioController = require("../controllers/tasaCambio.controller");
 
+router.get("/get_tasa/usd", tasaCambioController.getTasa);
+
 // Creamos un endpoint para que Vercel lo ejecute externamente
 router.get("/cron/update-tasa", async (req, res) => {
     try {
@@ -15,7 +17,5 @@ router.get("/cron/update-tasa", async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
-router.get("/getTasa", tasaCambioController.getTasa);
 
 module.exports = router;
