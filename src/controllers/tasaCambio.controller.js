@@ -5,23 +5,34 @@ const https = require("https");
 
 const getTasa = async (req, res) => {
     try {
-        const query = `
-            SELECT rate, rate_date FROM exchange_rates WHERE currency = 'USD' LIMIT 1
-        `;
-        // [rows] extrae el array de filas de la respuesta de mysql2
+        const query =
+            "SELECT rate, rate_date FROM exchange_rates WHERE currency = 'USD' LIMIT 1";
         const [rows] = await pool.query(query);
 
+        // Si rows está vacío o no es un array válido, enviamos un objeto por defecto controlado
         if (!rows || rows.length === 0) {
-            return res
-                .status(404)
-                .json({ message: "No se encontró la tasa de cambio USD" });
+            return res.status(200).json({
+                success: false,
+                data: {
+                    rate: 1.0,
+                    rate_date: new Date().toISOString().split("T")[0],
+                },
+                message:
+                    "No se encontró la tasa en la BD, se envía tasa base 1",
+            });
         }
 
-        // Devolvemos la primera fila encontrada como un objeto directo
-        res.json({ data: rows[0] });
+        // Retornamos exactamente la estructura que espera tu Angular
+        return res.status(200).json({
+            success: true,
+            data: rows[0],
+        });
     } catch (error) {
-        console.error("Error en getTasa:", error);
-        res.status(500).json({ message: "Error al obtener la tasa" });
+        console.error("Error crítico en getTasa:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Error interno al obtener la tasa",
+        });
     }
 };
 
