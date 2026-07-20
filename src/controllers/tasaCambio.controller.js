@@ -1,90 +1,80 @@
 const pool = require("../db.js");
 const moment = require("moment");
-const puppeteer = require("puppeteer");
-const jsdom = require("jsdom");
+const axios = require("axios");
+const https = require("https");
 
 const setTasaBCV = async (req, res) => {
-    let mostrar = [];
     try {
-        // Abrimos una instancia del puppeteer y accedemos a la url de google
-        const browser = await puppeteer.launch({
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-infobars",
-                "--window-position=0,0",
-                "--ignore-certifcate-errors",
-                "--ignore-certifcate-errors-spki-list",
-                '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"',
-            ],
+        const httpsAgent = new https.Agent({
+            rejectUnauthorized: false,
         });
-        const page = await browser.newPage();
-        const response = await page.goto(
-            "https://www.bcv.org.ve/bcv/mision-y-vision",
-            {
-                waitUntil: "load",
+
+        const response = await axios.get("https://www.bcv.org.ve/", {
+            timeout: 10000,
+            httpsAgent: httpsAgent,
+            headers: {
+                "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+                Connection: "keep-alive",
             },
-        );
-        const body = await response.text();
+        });
 
-        // Creamos una instancia del resultado devuelto por puppeter para parsearlo con jsdom
-        const {
-            window: { document },
-        } = new jsdom.JSDOM(body);
+        const html = response.data;
 
-        // Seleccionamos el dolar
-        document
-            .querySelectorAll("#dolar > .field-content > div > div > strong")
-            .forEach((element) => mostrar.push(element.textContent));
+        // 1. Extraer la tasa del Dólar
+        const dolarRegex =
+            /id="dolar"[\s\S]*?<strong[^>]*?>\s*([\d.,]+)\s*<\/strong>/i;
+        const match = html.match(dolarRegex);
 
-        // Seleccionamos la fecha
-        const fec = document.body
-            .querySelector(".view-content > div > .pull-right > span")
-            .getAttribute("content");
-
-        //Cerramos el puppeteer
-        await browser.close();
-
-        console.log(mostrar[0]);
-        return;
-
-        // busco si hay la tasa en la BD
-        const [result] = await pool.query(
-            "SELECT * FROM tasas_bcv where fecha = '" +
-                moment(fec).format("YYYY-MM-DD") +
-                "'",
-        );
-        if (result.length === 0) {
-            const [result] = await pool.query(
-                "INSERT INTO tasas_bcv (tasa, fecha) VALUES (" +
-                    mostrar[0].trim().replace(",", ".") +
-                    ", '" +
-                    moment(fec).format("YYYY-MM-DD") +
-                    "')",
+        if (!match || !match[1]) {
+            throw new Error(
+                "No se pudo encontrar el valor del dólar en el HTML del BCV.",
             );
+        }
 
-            if (result.affectedRows === 0) {
-                console.log("ERROR");
-                sendSmsErrorTasa();
-            }
+        const tasaRaw = match[1];
+        const tasaClean = parseFloat(tasaRaw.trim().replace(",", "."));
 
-            // res.status(200).send({
-            //     message: mostrar[0].trim().replace(",", "."),
-            //     fecha: moment(fec).format("YYYY-MM-DD"),
-            // });
+        // 2. Extraer la fecha valor real del BCV (ej: "2026-07-20")
+        const fechaRegex = /content="(\d{4}-\d{2}-\d{2})T/i;
+        const fechaMatch = html.match(fechaRegex);
+
+        // Si por algún motivo falla la regex de la fecha, usamos la fecha de hoy como salvavidas
+        const fechaValor = fechaMatch
+            ? fechaMatch[1]
+            : new Date().toISOString().split("T")[0];
+
+        // 3. Guardar en Base de Datos
+        // Modifica únicamente los valores de la moneda base 'USD' sin crear filas nuevas cada día
+        const updateQuery = `
+            UPDATE exchange_rates 
+            SET rate = ?, 
+                rate_date = ? 
+            WHERE currency = 'USD'
+        `;
+
+        const [result] = await pool.query(updateQuery, [tasaClean, fechaValor]);
+
+        // Verificación por si acaso borraste la fila de la BD sin querer
+        if (result.affectedRows === 0) {
+            console.warn(
+                "⚠️ Alerta: No se encontró la fila con currency = 'USD'. Creando registro inicial...",
+            );
+            await pool.query(
+                "INSERT INTO exchange_rates (currency, rate, rate_date) VALUES ('USD', ?, ?)",
+                [tasaClean, fechaValor],
+            );
         } else {
-            // res.status(200).send({
-            //     message: "No hay nada q subir",
-            // });
+            console.log(
+                `[BCV] Fila 'USD' actualizada con éxito. Nueva tasa: ${tasaClean} (Fecha Valor: ${fechaValor})`,
+            );
         }
     } catch (error) {
-        console.log(error);
-        sendSmsErrorTasa();
-        // res.status(500).send({ message: "Error", error });
+        console.error("Error en setTasaBCV:", error.message);
     }
 };
-
-//setTasaBCV();
 
 module.exports = {
     setTasaBCV,

@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const cron = require("node-cron");
 
 // Importa el archivo index.js de la carpeta routes (Node lo detecta automáticamente)
 const apiRoutes = require("./routes");
@@ -15,6 +16,20 @@ const allowedOrigins = [
     "https://condo-front-seven.vercel.app",
     "https://www.condominioaunclic.online",
 ];
+
+cron.schedule(
+    "0 15 * * *",
+    () => {
+        console.log(
+            "[CRON] Iniciando actualización automática de la Tasa BCV...",
+        );
+        setTasaBCV();
+    },
+    {
+        scheduled: true,
+        timezone: "America/Caracas", // 🇻🇪 Forzamos la zona horaria de Venezuela para evitar desfases con el servidor de Vercel
+    },
+);
 
 app.use(
     cors({
