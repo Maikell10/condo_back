@@ -236,9 +236,45 @@ const approvePayment = async (req, res) => {
     }
 };
 
+const rejectPayment = async (req, res) => {
+    const { id } = req.params; // Asumiendo que pasas el ID en la URL: /api/payments/:id/reject
+
+    try {
+        // 1. Verificamos que el pago exista y siga pendiente
+        const [payments] = await db.query(
+            "SELECT apartment_id, amount FROM payments WHERE id = ? AND status = 'PENDING_APPROVAL'",
+            [id],
+        );
+
+        if (payments.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Pago no encontrado o ya fue procesado previamente.",
+            });
+        }
+
+        // 2. Cambiamos el estatus a RECHAZADO
+        await db.query("UPDATE payments SET status = 'REJECTED' WHERE id = ?", [
+            id,
+        ]);
+
+        res.status(200).json({
+            success: true,
+            message: "El pago ha sido rechazado correctamente.",
+        });
+    } catch (error) {
+        console.error("Error al rechazar pago:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error interno al rechazar el pago.",
+        });
+    }
+};
+
 module.exports = {
     reportPayment,
     getMyPayments,
     getBuildingPayments,
     approvePayment,
+    rejectPayment,
 };

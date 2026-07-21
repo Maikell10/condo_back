@@ -32,4 +32,10 @@ router.patch(
     paymentController.approvePayment,
 );
 
+router.patch(
+    "/:id/reject",
+    authMiddleware.verifyToken,
+    paymentController.rejectPayment,
+);
+
 module.exports = router;
