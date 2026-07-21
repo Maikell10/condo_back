@@ -25,6 +25,19 @@ const createPoll = async (req, res) => {
     }
 };
 
+const getPollsByBuilding = async (req, res) => {
+    const { buildingId } = req.params;
+    try {
+        const [polls] = await db.query(
+            "SELECT * FROM polls WHERE building_id = ? ORDER BY created_at DESC",
+            [buildingId],
+        );
+        res.json({ success: true, data: polls });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 // 2. Obtener resultados detallados (Para el Libro de Actas)
 const getPollResults = async (req, res) => {
     const { pollId } = req.params;
@@ -118,4 +131,4 @@ const castVote = async (req, res) => {
     }
 };
 
-module.exports = { createPoll, getPollResults, castVote };
+module.exports = { createPoll, getPollResults, castVote, getPollsByBuilding };

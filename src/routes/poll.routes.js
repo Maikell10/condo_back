@@ -16,6 +16,13 @@ router.post(
     pollController.createPoll,
 );
 
+// GET /api/polls/building/:buildingId
+router.get(
+    "/building/:buildingId",
+    authMiddleware.verifyToken,
+    pollController.getPollsByBuilding,
+);
+
 // ==========================================
 // RUTAS PARA EL PROPIETARIO
 // ==========================================
