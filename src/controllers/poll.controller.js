@@ -27,11 +27,18 @@ const createPoll = async (req, res) => {
 
 const getPollsByBuilding = async (req, res) => {
     const { buildingId } = req.params;
+    // Capturamos el apartment_id del usuario desde el token o query string
+    const apartmentId = req.user?.apartmentId || req.query.apartmentId;
+
     try {
-        // 🔥 MAGIA SQL: Buscamos todas las encuestas de TODOS los edificios
-        // que pertenezcan al mismo 'admin_id' del edificio consultado.
         const query = `
-            SELECT p.* 
+            SELECT 
+                p.*,
+                EXISTS(
+                    SELECT 1 
+                    FROM poll_votes pv 
+                    WHERE pv.poll_id = p.id AND pv.apartment_id = ?
+                ) AS userVoted
             FROM polls p
             JOIN buildings b ON p.building_id = b.id
             WHERE b.admin_id = (
@@ -40,8 +47,15 @@ const getPollsByBuilding = async (req, res) => {
             ORDER BY p.created_at DESC
         `;
 
-        const [polls] = await db.query(query, [buildingId]);
-        res.json({ success: true, data: polls });
+        const [polls] = await db.query(query, [apartmentId || 0, buildingId]);
+
+        // Convertimos el valor booleano de MySQL (1/0) a boolean explícito
+        const formattedPolls = polls.map((p) => ({
+            ...p,
+            userVoted: Boolean(p.userVoted),
+        }));
+
+        res.json({ success: true, data: formattedPolls });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
