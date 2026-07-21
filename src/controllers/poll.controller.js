@@ -28,10 +28,19 @@ const createPoll = async (req, res) => {
 const getPollsByBuilding = async (req, res) => {
     const { buildingId } = req.params;
     try {
-        const [polls] = await db.query(
-            "SELECT * FROM polls WHERE building_id = ? ORDER BY created_at DESC",
-            [buildingId],
-        );
+        // 🔥 MAGIA SQL: Buscamos todas las encuestas de TODOS los edificios
+        // que pertenezcan al mismo 'admin_id' del edificio consultado.
+        const query = `
+            SELECT p.* 
+            FROM polls p
+            JOIN buildings b ON p.building_id = b.id
+            WHERE b.admin_id = (
+                SELECT admin_id FROM buildings WHERE id = ?
+            )
+            ORDER BY p.created_at DESC
+        `;
+
+        const [polls] = await db.query(query, [buildingId]);
         res.json({ success: true, data: polls });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -46,12 +55,15 @@ const getPollResults = async (req, res) => {
         const [polls] = await db.query("SELECT * FROM polls WHERE id = ?", [
             pollId,
         ]);
-        if (polls.length === 0)
+        if (polls.length === 0) {
             return res.status(404).json({ message: "Encuesta no encontrada" });
+        }
 
         const poll = polls[0];
 
-        // Sumamos los votos SI y NO
+        // 🔥 Al sumar los votos aquí, MySQL automáticamente contará los de TODOS
+        // los apartamentos de TODOS los edificios del complejo, porque los votos
+        // están atados al poll_id directamente.
         const [results] = await db.query(
             `
             SELECT 
