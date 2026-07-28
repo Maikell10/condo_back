@@ -32,42 +32,10 @@ Encuestas Comunidad : para llevar a cabo temas a aprobar por la comunidad
 
 
 ------------------
-ALTER TABLE payments 
-ADD COLUMN currency ENUM('USD', 'VES') DEFAULT 'VES' AFTER amount,
-ADD COLUMN exchange_rate DECIMAL(15,4) DEFAULT 1.0000 AFTER currency,
-ADD COLUMN amount_local DECIMAL(15,2) NULL AFTER exchange_rate,
-ADD COLUMN payment_method VARCHAR(50) NULL AFTER amount_local;
+Si tengo un contrato de ingreso, ya sea una antena en el edificio donde se cobre dinero por eso, como adaptarlo al sistema de condominio
 
+y si la junta de condominio tiene en venta controles de estacionamiento, llaves de puertas, etc, asi como si tiene locales en alquiler
 
-<div class="text-right">
-    <div class="text-xs uppercase font-bold text-gray-400">Total a Pagar</div>
-    <div class="text-3xl font-black text-indigo-600">${{ data.totalBill | number:'1.2-2' }}</div>
-    
-    <!-- Equivalencia en Bs -->
-    <div class="text-sm font-bold text-gray-500 mt-1">
-        Ref: Bs. {{ (data.totalBill * tasaDelDia) | number:'1.2-2' }}
-    </div>
-</div>
+asiento contable?
 
-
-{
-  "apartmentId": 41,
-  "receiptId": 15,
-  "currency": "VES",
-  "amountLocal": 1600,
-  "exchangeRate": 40.00,
-  "reference": "123456789",
-  "paymentMethod": "PAGO_MOVIL"
-}
-
-
-// En Node.js, calculas el amount (USD) real que entró basado en la tasa:
-const amountInUsd = req.body.currency === 'VES' 
-    ? (req.body.amountLocal / req.body.exchangeRate).toFixed(2) 
-    : req.body.amountLocal;
-
-// Y haces el INSERT guardando toda la historia:
-// amount: amountInUsd (ej. 40.00)
-// currency: 'VES'
-// exchange_rate: 40.00
-// amount_local: 1600.00
+gastos e ingresos administrativos para propietario en particular

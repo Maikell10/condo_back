@@ -454,9 +454,11 @@ const getStatements = async (req, res) => {
                        r.amount, r.paid, (r.amount - r.paid) as balance, 
                        r.status, r.description,
                        a.number as apartment, u.name as ownerName, b.name as buildingName,
+                       
+                       -- Identificadores necesarios para el Frontend
                        a.id as apartmentId, a.building_id as buildingId,
                        
-                       -- BÚSQUEDA CORREGIDA: Buscamos la fecha máxima a través de la tabla intermedia payment_receipts
+                       -- Buscamos la fecha máxima a través de la tabla intermedia payment_receipts
                        (SELECT DATE_FORMAT(MAX(p.payment_date), '%Y-%m-%d') 
                         FROM payments p 
                         JOIN payment_receipts pr ON p.id = pr.payment_id 
@@ -478,7 +480,10 @@ const getStatements = async (req, res) => {
                        r.status, r.description,
                        a.number as apartment, u.name as ownerName,
 
-                       -- BÚSQUEDA CORREGIDA: Buscamos la fecha máxima a través de la tabla intermedia payment_receipts
+                       -- 🔥 SOLUCIÓN: Agregados los identificadores faltantes
+                       a.id as apartmentId, a.building_id as buildingId,
+
+                       -- Buscamos la fecha máxima a través de la tabla intermedia payment_receipts
                        (SELECT DATE_FORMAT(MAX(p.payment_date), '%Y-%m-%d') 
                         FROM payments p 
                         JOIN payment_receipts pr ON p.id = pr.payment_id 
