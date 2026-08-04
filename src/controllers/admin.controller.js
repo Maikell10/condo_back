@@ -1,5 +1,8 @@
 const db = require("../db");
 const bcrypt = require("bcryptjs");
+const csv = require("csv-parser");
+const crypto = require("crypto");
+const fs = require("fs");
 
 // Obtener todos los usuarios del sistema con info de su edificio
 // controllers/user.controller.js
@@ -325,6 +328,135 @@ const getDashboardStats = async (req, res) => {
         });
     }
 };
+
+//-----------------------------------------------------------------------------
+const csvFilePath = "subir conjunto 2.csv";
+async function importData() {
+    const results = [];
+
+    // Leer el archivo CSV (Usando separator ';' y latin1 por el formato del archivo)
+    fs.createReadStream(csvFilePath, { encoding: "latin1" })
+        .pipe(csv({ separator: ";" }))
+        .on("data", (data) => results.push(data))
+        .on("end", async () => {
+            console.log(
+                `CSV leído con éxito. Se procesarán ${results.length} filas.`,
+            );
+            await processRows(results);
+        });
+}
+
+async function processRows(rows) {
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Asignamos la fecha de hoy a todos los recibos de deuda histórica
+    const issueDate = new Date().toISOString().split("T")[0];
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+
+        // Asumiendo que la nueva columna en tu CSV se llama 'deuda'
+        const {
+            building_id,
+            number,
+            alicuota,
+            name_user,
+            email,
+            password,
+            role,
+            deuda,
+        } = row;
+
+        try {
+            // --- 1. INSERTAR O BUSCAR USUARIO ---
+            let userId = null;
+
+            // Verificar si el email ya existe para evitar errores de duplicidad
+            const [existingUsers] = await db.query(
+                "SELECT id FROM users WHERE email = ?",
+                [email],
+            );
+
+            if (existingUsers.length > 0) {
+                userId = existingUsers[0].id;
+                console.log(
+                    `[Fila ${i + 1}] Usuario existente: ${email} (ID: ${userId})`,
+                );
+            } else {
+                const [userResult] = await db.query(
+                    'INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, "ACTIVE")',
+                    [name_user, email, password, role || "OWNER"],
+                );
+                userId = userResult.insertId;
+                console.log(
+                    `[Fila ${i + 1}] Nuevo usuario creado: ${email} (ID: ${userId})`,
+                );
+            }
+
+            // --- 2. INSERTAR APARTAMENTO ---
+            const accessCode = crypto
+                .randomBytes(4)
+                .toString("hex")
+                .toUpperCase();
+            const alicuotaParsed = parseFloat(
+                String(alicuota).replace(",", "."),
+            );
+
+            const [aptResult] = await db.query(
+                "INSERT INTO apartments (building_id, owner_id, number, access_code, alicuota) VALUES (?, ?, ?, ?, ?)",
+                [building_id, userId, number, accessCode, alicuotaParsed],
+            );
+
+            const apartmentId = aptResult.insertId;
+            console.log(
+                `[Fila ${i + 1}] ✅ Apartamento ${number} creado con ID ${apartmentId} y código ${accessCode}`,
+            );
+
+            // --- 3. PROCESAR DEUDA HISTÓRICA ---
+            if (deuda && String(deuda).trim() !== "") {
+                const amount = parseFloat(String(deuda).replace(",", "."));
+
+                if (!isNaN(amount) && amount > 0) {
+                    await db.query(
+                        `INSERT INTO receipts 
+                        (apartment_id, amount, paid, status, description, issue_date, type) 
+                        VALUES (?, ?, 0, 'PENDING', 'Deuda Histórica Acumulada', ?, 'HISTORICAL')`,
+                        [apartmentId, amount, issueDate],
+                    );
+                    console.log(
+                        `[Fila ${i + 1}] 💰 Deuda de $${amount} cargada al Apartamento ID ${apartmentId}`,
+                    );
+                } else {
+                    console.log(
+                        `[Fila ${i + 1}] ℹ️ Sin deuda válida para cargar (Monto: ${deuda}).`,
+                    );
+                }
+            } else {
+                console.log(
+                    `[Fila ${i + 1}] ℹ️ No se especificó deuda en el CSV.`,
+                );
+            }
+
+            successCount++;
+        } catch (error) {
+            console.error(
+                `[Fila ${i + 1}] ❌ Error al procesar Apto ${number}:`,
+                error.message,
+            );
+            errorCount++;
+        }
+    }
+
+    console.log(`\n================================`);
+    console.log(`IMPORTACIÓN MASIVA FINALIZADA`);
+    console.log(`================================`);
+    console.log(`✅ Éxitos Totales (Fila completa procesada): ${successCount}`);
+    console.log(`❌ Errores Totales: ${errorCount}`);
+    process.exit();
+}
+//importData();
+//-----------------------------------------------------------------------------
 
 module.exports = {
     getAllUsers,

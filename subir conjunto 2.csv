@@ -1,0 +1,281 @@
+building_id;number;alicuota;name_user;email;password;role;deuda
+23;01-11;0.125;Luisa Pacheco;carlos14412814@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;186,93
+23;01-12;0.125;Ana Tortolero;anna.torrest17@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;34,64
+23;01-21;0.125;Hector Segovia;hectoralf.8@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,63
+23;01-22;0.125;Nataly Ramirez;jesusadrihan.2001@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+23;01-31;0.125;Marlene Quiñonez;marlenemqr@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,90
+23;01-32;0.125;Domiciana Herrera De Rondon;karensrondon@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;344,57
+23;01-41;0.125;Greicy Olivero Acosta;GCOA-69@HOTMAIL.COM;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,56
+23;01-42;0.125;Gladys Polanco;glamar01@hotmail.com, oswaldolinares@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,38
+24;02-11;0.0625;Maritza Martinez;martinezwilmy@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+24;02-12;0.0625;Yunnis Garcia;ydanielgv@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;17,10
+24;02-13;0.0625;MAYERLIN RONDON;rondonmayerling21@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+24;02-14;0.0625;Aldo Ravelo;mardaidiaz@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;47,55
+24;02-21;0.0625;Nestor Gamez;autorepuestoburrimar@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+24;02-22;0.0625;Jose M. Ortiz Zambano;agape.ortiz@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,52
+24;02-23;0.0625;Liseet Urbina;carolinau10@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,46
+24;02-24;0.0625;Enrique Jacotte;licenciadajacotte@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,60
+24;02-31;0.0625;Maura garcia;jolismar@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,17
+24;02-32;0.0625;Yunami E.Gamez R.;yunami_07@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,69
+24;02-33;0.0625;Dalila Arenas;arenasdalila68@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;105,01
+24;02-34;0.0625;Amarilys Quintero;amarilyszenaida@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,09
+24;02-41;0.0625;Aldo Alvarez;makey_100@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;65,69
+24;02-42;0.0625;Zullybeth Oviol;zullybeth10@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;11,66
+24;02-43;0.0625;Judith Vega;khimberlymartin@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,94
+24;02-44;0.0625;Rosa Gonzalez;vane.150995@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,28
+25;03-11;0.0625;Victor Aguilar;aamariaelizabeth@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+25;03-12;0.0625;Gilberto Rojas;giro0709@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,02
+25;03-13;0.0625;Marina Baldrich;marinaebaldrich@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+25;03-14;0.0625;Adis Carnelutti;adissomalia05@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,11
+25;03-21;0.0625;Ruben Bracamonte; mathias110118@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;210,40
+25;03-22;0.0625;Ismael Olivo Vasquez;olivoismael@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,25
+25;03-23;0.0625;Carmen Medina;aleica1166@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,94
+25;03-24;0.0625;Carlos Hilarraza;carloshilarraza@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+25;03-31;0.0625;Jesus Chirinos;;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;75,57
+25;03-32;0.0625;Gabriel Cruz;mathiasgc566@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;267,06
+25;03-33;0.0625;Carlos Robayo;gallangomaggi@gmail.com, carlos2024@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;396,99
+25;03-34;0.0625;Joseph Volcan;jvolcan94@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;238,97
+25;03-41;0.0625;Genesis Desiree Delgado Pino;gddp1010@gmail.com, jaragortgonzalez@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;58,41
+25;03-42;0.0625;Jhoan Garcia;jhoanpunks@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;11,64
+25;03-43;0.0625;Ruth Barboza;terapeutasdefamilia@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;19,00
+25;03-44;0.0625;Juan Quintero;nc_angelica@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,18
+26;04-11;0.0625;Ismelis Moya;leansimoya36@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;207,50
+26;04-12;0.0625;Juliana Espinoza;julianaespinoza81@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;145,00
+26;04-13;0.0625;Rosana Gelviz;maritza07gelvis@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;29,12
+26;04-14;0.0625;Nelgica Sanchez;nelgica5859@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;14,67
+26;04-21;0.0625;Armando Zamora;a.zamora18@yahoo.com.ve;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;80,08
+26;04-22;0.0625;Richard Segovia;nela_vy@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,02
+26;04-23;0.0625;Beatriz Clavo de Medina;alejandraclavo@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;154,58
+26;04-24;0.0625;Levi Aponte;susanaravelo@gmail.com, leviaponte28@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;509,69
+26;04-31;0.0625;Mariajose Romero;hermesupar@gmail.com, majo19775@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,21
+26;04-32;0.0625;Ali Valera;sorleycanelon@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,16
+26;04-33;0.0625;Juan Nuñez;jnunegar66@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;151,97
+26;04-34;0.0625;Zuleika Mercado;zuleica.laroza@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;43,63
+26;04-41;0.0625;Ysabel Mendez;mendez_isabel159@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+26;04-42;0.0625;Wilfredo Jimenez;wilfredojjimenez@hotmail.com, catybeljimenez@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;99,76
+26;04-43;0.0625;Corina Rondon;corinacrondon@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,18
+26;04-44;0.0625;Dorkis Martinez;dorkismr@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,18
+27;05-11;0.0625;Zuly Guevara;zuliguevara11@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;329,85
+27;05-12;0.0625;Haydeemar Brito de Guevara;diayarirosas@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;197,45
+27;05-13;0.0625;Joan Rodriguez;zayleenblanco468@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;50,88
+27;05-14;0.0625;Jose Maita;judith_orellana1@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,17
+27;05-21;0.0625;Carmen Tovar;tovarcv@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;273,65
+27;05-22;0.0625;Vita Gonzalez;vitabbg530@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+27;05-23;0.0625;Zulima Perdomo;zulimaperdomo@gmail.com, raizavpalacioss@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;47,91
+27;05-24;0.0625;Edilsa Torres;camposyubeyker10@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,22
+27;05-31;0.0625;Angela Cruz;carlamc_021@hotmail.com, carla021mc@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;150,27
+27;05-32;0.0625;Juana Chirinos;bayueloalex@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+27;05-33;0.0625;Tomas De La Cruz Garcia;lacruztomas@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+27;05-34;0.0625;Nancy Vargas;eyberbarreto517@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,42
+27;05-41;0.0625;Dusbeth Lugo;dusbethlugo2@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;446,26
+27;05-42;0.0625;Rafael Sierra;rasm_60p@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;467,14
+27;05-43;0.0625;Carmen Diaz;carmendiazcastro243@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;61,34
+27;05-44;0.0625;Mali Garcia;marlyn231280@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;164,35
+28;06-11;0.0625;Cecilia Pinto;cepi2211@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;10,41
+28;06-12;0.0625;Nallyve Cisnero;nallyvecisnero@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,25
+28;06-13;0.0625;Pedro Duarte;duarteliliana@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,44
+28;06-14;0.0625;Giovanni Muñoz;angelazambrano2409@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+28;06-21;0.0625;America Escalona;americachayanne@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,17
+28;06-22;0.0625;Enrique Figueras;enriqueluisf@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;25,62
+28;06-23;0.0625;Rosa Farfan;rosafarfan35@yahoo.com, hluisgermain@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;234,30
+28;06-24;0.0625;Leyda Lucero;luceroleyda@gmail.com, neomarmorao@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;68,34
+28;06-31;0.0625;Lucia Guevara;gpatricia.aponte1@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;152,06
+28;06-32;0.0625;Betty Torres;bettytm@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,01
+28;06-33;0.0625;Arelys Rodriguez;rodriguez_arelis@yahoo.es;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+28;06-34;0.0625;Julian Avila;acostaaikel@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;60,47
+28;06-41;0.0625;Marcos Albornoz;marcosalbornozpolo@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,91
+28;06-42;0.0625;Roger Araujo;lissetgonzalez100@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;28,79
+28;06-43;0.0625;Ysnelyi Oliveros;lety1078@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;88,56
+28;06-44;0.0625;Judith Lovera;elinelmedina949@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+29;07-11;0.0625;Andreina Silva;desireesilva82@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;302,67
+29;07-12;0.0625;Carlos Vasquez;carlos.visaez@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,32
+29;07-13;0.0625;Maikel Alvarez;;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;321,19
+29;07-14;0.0625;Martha Dams;marthadams55@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+29;07-21;0.0625;German Fernandez;gjfernandez91@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;327,54
+29;07-22;0.0625;Ismeris Vallenilla;;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+29;07-23;0.0625;Juana Gutierrez;valeryivan2004@gmail.com, juanafa60@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,46
+29;07-24;0.0625;Gladys Acosta;acostayaya20@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,76
+29;07-31;0.0625;Xiomara Carvajal;cleiderman07@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,98
+29;07-32;0.0625;Franklin Padilla;norbelyszerpa@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+29;07-33;0.0625;Rosalba Mendoza;bioquimicavalentina@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,28
+29;07-34;0.0625;Jesus Gallardo;giroc.giro21@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;116,13
+29;07-41;0.0625;Marisela zambrano;zmarisela478@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+29;07-42;0.0625;Ramon Meneses;rosarondon54@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;11,93
+29;07-43;0.0625;Karina Almea;karinaalmea@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;119,82
+29;07-44;0.0625;Rosemary Acosta;camilcardo@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;93,04
+30;08-11;0.0625;Ricardo Fernandes;elisadelvallef@gmail.com ;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,87
+30;08-12;0.0625;Ibis Bracho;lbracho08@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;31,01
+30;08-13;0.0625;Reina Atencio;pilaraten@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;54,58
+30;08-14;0.0625;Jean Romero;jeancarloro@gmail.com, franci29delgado@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;61,44
+30;08-21;0.0625;Omaira Cisneros;jennifer.marcano215@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;49,00
+30;08-22;0.0625;Maria Juarez;mariabjuarez@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+30;08-23;0.0625;Maria Aladejo;aladejomaria@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+30;08-24;0.0625;Maritza Gutierrez;shadday0312@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+30;08-31;0.0625;Edgar Manzo;yeiser25@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;20,63
+30;08-32;0.0625;Dayana Vasquez;vasquezkiki@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;115,92
+30;08-33;0.0625;Juan Rodriguez;silvacmarinae@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,89
+30;08-34;0.0625;Gervin Gomez;predeitos1@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;421,63
+30;08-41;0.0625;Carmen Perez;yohamca16@hotmail.com, yoha141611@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+30;08-42;0.0625;Noelviz Meza;jhonnertovarmeza@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,18
+30;08-43;0.0625;Johan Ramos;gabriela18chelita@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;409,48
+30;08-44;0.0625;Ronald Requena;requena_ronald@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,19
+31;09-11;0.0625;Carmen Yadira Vargas Capote;yvargas@gruporomher.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+31;09-12;0.0625;Omar Echenique;echeniqueomar29@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,21
+31;09-13;0.0625;Wolfang Garcia;;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;250,28
+31;09-14;0.0625;Luis Guillermo Leon Barriento;arias77.rocio@gmai.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,02
+31;09-21;0.0625;Gustavo Splinter; Nixonsplinter@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;40,59
+31;09-22;0.0625;Jose Moleiro;jdmoleiro80@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+31;09-23;0.0625;Maria Ramirez;angelamariaramirez133@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+31;09-24;0.0625;Ivan Telleria;ivantelleriad@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,49
+31;09-31;0.0625;Rosymar Rodriguez;ing.rosymar_rodriguez@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;80,97
+31;09-32;0.0625;Gloria Coro;corog23@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;19,34
+31;09-33;0.0625;Jorge Ramirez;jorgera2727@gmail.com, yamilet.oviedo03@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;109,50
+31;09-34;0.0625;Ines Chacon ;ineschacon3@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,22
+31;09-41;0.0625;Ana Coll;d_coll_rivas@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;352,40
+31;09-42;0.0625;Edgar Vergara;edgar.vergara.ehv@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;116,42
+31;09-43;0.0625;Ruben  Gonzalez;ruben.dariog42@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;8,49
+31;09-44;0.0625;Teresa Blanco;maritereblanco58@gmail.com, eidry.infante@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;29,40
+32;10-11;0.0625;Carmen Chauran;rogeliochauran06@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,22
+32;10-12;0.0625;Solangel Milano;solangelmilano@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,90
+32;10-13;0.0625;Alejandro Loaiza;jasloaiza@hotmail.com,  miarondon70@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,78
+32;10-14;0.0625;Hector Cedeño;h231261@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+32;10-21;0.0625;Yamaida Lopez;yamaidal@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;71,35
+32;10-22;0.0625;Josefina Duarte;todopendones@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;239,33
+32;10-23;0.0625;Maria Garcia;judithgalindez@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;14,12
+32;10-24;0.0625;Omar Rodriguez;omarrodriguez1752@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+32;10-31;0.0625;Patricia Gonzalez;loredags@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;381,51
+32;10-32;0.0625;Ambar Sanchez;ambarsanchez83@hotmail.com, ramomatos1194@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+32;10-33;0.0625;Jeferson Bravo;gismerlyrr@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;108,44
+32;10-34;0.0625;Marbelis Mena;marbelismena29@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;318,64
+32;10-41;0.0625;Yanette Olivar;yanetteolivar@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;208,10
+32;10-42;0.0625;Julio Sierralta;gabrielasierraalta744@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;300,29
+32;10-43;0.0625;Jorge Rodriguez;jorgerm70@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,94
+32;10-44;0.0625;Alicia Leòn;yajairamontiel05@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+33;11-11;0.0625;Urbanizadora Guadales;isomelga@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+33;11-12;0.0625;Maria Contreras;mariacontrerasdesguilera@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;12,00
+33;11-13;0.0625;Kimberly Puerta;kiimph21@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;12,87
+33;11-14;0.0625;Maria Agustina Garcia;luisnarvaez84@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+33;11-21;0.0625;Jose Hernandez;jessicahtorrealba@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;26,66
+33;11-22;0.0625;Nancy Hernandez;bernis26@yahoo.es torrealbanancy42@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+33;11-23;0.0625;Jennette Gallardo;jeannetemarline@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;12,43
+33;11-24;0.0625;Luis Hernandez;lhernandezp@bancomercantil.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+33;11-31;0.0625;Jose Espinoza;jj_espinoza35@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;98,01
+33;11-32;0.0625;Alberta Rebolledo;cjrr84@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;173,90
+33;11-33;0.0625;Nancy Arciniegas;cardonayldemar@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;26,66
+33;11-34;0.0625;Manuela Espinoza;manuelaespinoza2020@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;12,39
+33;11-41;0.0625;Yanucelis Pinto;pyanucelis@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,94
+33;11-42;0.0625;Ana Gamboa;anamgamboa3@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;26,66
+33;11-43;0.0625;Laura Bernal;alejandraplr09@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;12,43
+33;11-44;0.0625;Angela Diaz;jennik99@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;80,04
+34;12-11;0.0625;Maria Rivas;mariamercedes215@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+34;12-12;0.0625;Rosse Gonzalez;quinteroangela819@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+34;12-13;0.0625;Ana Contreras;maritzaangeless@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;423,91
+34;12-14;0.0625;Karina Crespo;karina060107@hotmail.com, wolfgangtovar27@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;29,82
+34;12-21;0.0625;Darcy Úzcategui;darcyuzca@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;373,59
+34;12-22;0.0625;Ana Oviedo;wendy_766@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;197,02
+34;12-23;0.0625;Douglas Dominguez;rivas.mildred@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,09
+34;12-24;0.0625;Marelis Peña;marelisjpena@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,64
+34;12-31;0.0625;Samary Romero;samariromero@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;81,62
+34;12-32;0.0625;Romulo Diaz;mathiasjove@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;51,20
+34;12-33;0.0625;YEIXI TOVAR;eleanystessman@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+34;12-34;0.0625;Leonardo Ardila;leonardoardila951@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;62,30
+34;12-41;0.0625;Lina Palacios ;linapalacios37@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;17,95
+34;12-42;0.0625;YADIERA ACUÑA;yadiraacu10@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;178,21
+34;12-43;0.0625;Jesus Lostale;azucenalostale@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;50,64
+34;12-44;0.0625;Maria IsabeI Villegas;maryvi_17@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;14,94
+35;13-11;0.0625;Geny Torrado;genytorrado@gmail.com, wilsdeli.01@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+35;13-12;0.0625;Nelly Perez;nipudeoli@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;14,94
+35;13-13;0.0625;Mariela Duarte;nduarte8@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;80,50
+35;13-14;0.0625;Magda Garcia;magdafosforito@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+35;13-21;0.0625;Manuel Codecido;manuelecodecido@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+35;13-22;0.0625;Elisa Vicentti;elisavicentti@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,31
+35;13-23;0.0625;Bayardo Moncada;brayan.moncada@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,22
+35;13-24;0.0625;Carmen Ramirez;virginiarangel49@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,19
+35;13-31;0.0625;Angel Lara;angelruben.lara@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;81,06
+35;13-32;0.0625;Maritza Freites;maritza.freites1962@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,09
+35;13-33;0.0625;Janitze Borges;janitzeb@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+35;13-34;0.0625;Jose Perez;perezvivasj99@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;71,25
+35;13-41;0.0625;Otilia Garcia;otilg@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,23
+35;13-42;0.0625;Alida Miranda;alidamiranda071153@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;229,04
+35;13-43;0.0625;Yaselis Farias;oswaldotorres948@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;18,50
+35;13-44;0.0625;Maritza Lopez;mjlopezfe@yahoo.es;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+36;14-11;0.0625;Juan Martinez;;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+36;14-12;0.0625;Disneilly Gonzalez;disneillygonzalez@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,56
+36;14-13;0.0625;Luis Vargas;dagilinda_88@hotmail.com, rosa26051972@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;459,45
+36;14-14;0.0625;Nayellit Sandoval;sandonayeb@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;111,51
+36;14-21;0.0625;Jose Saez;chinojose-62@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+36;14-22;0.0625;Argenis Lopez;;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,00
+36;14-23;0.0625;Judith Galindez;judithgalindez@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,15
+36;14-24;0.0625;Jose Duran;soniaromero53@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,39
+36;14-31;0.0625;Harold Yepez;yepezharold@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;11,03
+36;14-32;0.0625;Yamelis Blanco;yameliszoraidablancoespinoza@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;25,01
+36;14-33;0.0625;Martha Perez;malupema0812@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;47,47
+36;14-34;0.0625;Lucy Centeno;lenimax76@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;469,45
+36;14-41;0.0625;Mario Dias;marwildias@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,96
+36;14-42;0.0625;Jose A. Lorenzo D.;joseldz@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+36;14-43;0.0625;Humberto Leon;humberto_leon59@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,07
+36;14-44;0.0625;Yackson Diaz;jackerja@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;31,16
+37;15-11;0.0625;Morelba Garcia;barbymijares6@gmail.com, Morelba3011@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;72,83
+37;15-12;0.0625;Omaira Hernandez;omaira.j.h@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;19,70
+37;15-13;0.0625;Keibys Mudarra;cocrestel@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;31,55
+37;15-14;0.0625;Maria E Sangroni;adriramirez221010@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;256,46
+37;15-21;0.0625;Yinett Amaricua;ayinett81@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;46,30
+37;15-22;0.0625;Adolfo Lira;zoniamotarios@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;230,77
+37;15-23;0.0625;Maria Hernandez;deivip81@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;20,18
+37;15-24;0.0625;Carmen Chauran;lachary69@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;19,70
+37;15-31;0.0625;Yrveria Salazar;yrveriasalazar@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;45,19
+37;15-32;0.0625;Jhossert A. Guillen Carrillo;maria.bandre@hotmil.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;19,70
+37;15-33;0.0625;Eugenio Rincon ;marialuzsanchez1533@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+37;15-34;0.0625;Carlos Mesa;noravalentina@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;19,70
+37;15-41;0.0625;Amparo Castro;amparo.castro69@gmail.com, sussynena_95@hotmail.com, branjhose@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;82,86
+37;15-42;0.0625;Grisel Palencia;miguelamas1702@gmail.com, griselpalencia91@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;41,59
+37;15-43;0.0625;Asdrubal Vivas;ymunera1@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;93,99
+37;15-44;0.0625;Helenis Landaeta;helenis1103@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;166,75
+38;16-11;0.0625;Marcos Montañez;mitesorom@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,97
+38;16-12;0.0625;Pedro Iglesias;;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,95
+38;16-13;0.0625;Aurelio Perez;mariaperezvd22@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,90
+38;16-14;0.0625;Carlos Peña;mirandito123@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;91,17
+38;16-21;0.0625;Daniel Castillo;danielcastillonino@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;16,81
+38;16-22;0.0625;Noely Benavide;noely_benavide@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,70
+38;16-23;0.0625;Joel Rojas;joelrojas09@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+38;16-24;0.0625;Maiby Linares;Linaresmaiby@gmail.com, milasaez1959@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;70,33
+38;16-31;0.0625;Rodavlas Medina;rodmedina65@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;25,99
+38;16-32;0.0625;Gredys Silva;ivanmora23@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;51,06
+38;16-33;0.0625;Guillermo Quesada;guille52quesada@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,26
+38;16-34;0.0625;Lucero Nuñez;luceroandarcia@hotmail.com, luceroandarcia96@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;43,29
+38;16-41;0.0625;Elide Guzman;elideguzman08@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,22
+38;16-42;0.0625;Martha Galindez;morthy.mg24@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;154,26
+38;16-43;0.0625;Argenis Espinoza;jakselisflores8@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;125,52
+38;16-44;0.0625;Kelvin Medina;medinakelvin1984@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;61,86
+39;17-11;0.0625;Marques Alexis Mendoza ;marques_mendoza@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,02
+39;17-12;0.0625;Marlene Useche;tayjoseth@hotmail.com,  gregoryblancocorrea@gmail.com  ;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,43
+39;17-13;0.0625;Dario Villamizar;villamizard51@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+39;17-14;0.0625;JHOSELIN BOULLON;gmsytjb@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+39;17-21;0.0625;Ricardo Pedraza;eucarismujica@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;48,25
+39;17-22;0.0625;Omar Perez;caracas6963@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,78
+39;17-23;0.0625;Narciso Bonilla; JB3296219@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;14,21
+39;17-24;0.0625;Hilda Castillo;hilramca@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;58,72
+39;17-31;0.0625;Norys Ruiz;greysmejia@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,02
+39;17-32;0.0625;Raiza Mujica;abg.genesisvargas@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,87
+39;17-33;0.0625;Domingo Zambrano;zambrano.domingo@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,73
+39;17-34;0.0625;Maria Morales;negrita-maria@hotmail.com, aemezamo@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,73
+39;17-41;0.0625;Edgar Palma;palmaflores741@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;15,99
+39;17-42;0.0625;Maria Soto;marichu_357@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,22
+39;17-43;0.0625;Carmen Cruz;victorgomez14@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;226,20
+39;17-44;0.0625;Elizabeth Rodriguez;miaisajime@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;133,55
+40;18-11;0.0625;Milinto Rengifo;crengifom@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;42,20
+40;18-12;0.0625;Jennifer Beltran;jenniferbeltran_1990@hotmail.com, guamaphenix@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+40;18-13;0.0625;Victoria Aragon;vicky511101@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;40,09
+40;18-14;0.0625;Francisco Carrillo;karlaisa82@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;56,06
+40;18-21;0.0625;Erasmo Santana;josepachecolinares@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;81,06
+40;18-22;0.0625;Livia Duran;evelinguaramato@yahoo.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+40;18-23;0.0625;Juan Bencomo;evelinguaramato@yahoo.com, juanbencomo10@hotmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;25,81
+40;18-24;0.0625;Mairyn Herrera;mairyn.herrera@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+40;18-31;0.0625;Cruz Pino;materesa0113@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,28
+40;18-32;0.0625;Mariana Pino;materesa0113@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;30,28
+40;18-33;0.0625;Janitza Artigas;janitza1833@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+40;18-34;0.0625;Migdalia Sanchez;sanchelectronics@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;0,00
+40;18-41;0.0625;Antulio Reyna; ;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;14,99
+40;18-42;0.0625;Ana Cecilia Carrillo Romero;abaucec@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;29,97
+40;18-43;0.0625;Jose Daniels; ;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;39,41
+40;18-44;0.0625;Yolmary Cartaya;yolma.cartaya54@gmail.com;$2b$10$P6nti1ZV4YagWwXoYnp3U.plcyRTPloHT.ylsvmlRwHM0y1LwJUiK;OWNER;1,04
