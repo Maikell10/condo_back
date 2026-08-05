@@ -3,12 +3,16 @@ const db = require("../db");
 // Obtener todos los conceptos disponibles
 const getConcepts = async (req, res) => {
     try {
+        // 🔥 Agregamos el WHERE para ocultar el Fondo de Reserva del frontend
         const [concepts] = await db.query(
-            "SELECT * FROM expense_concepts ORDER BY code ASC",
+            "SELECT * FROM expense_concepts WHERE description != 'Fondo de Reserva' ORDER BY description ASC",
         );
-        res.json({ data: concepts });
+        res.json({ success: true, data: concepts });
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener el catálogo" });
+        res.status(500).json({
+            success: false,
+            message: "Error al obtener conceptos",
+        });
     }
 };
 
