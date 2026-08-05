@@ -166,29 +166,24 @@ const generateMonthlyBilling = async (req, res) => {
 
                 let conceptId;
                 if (concept.length === 0) {
+                    // Le asignamos un código único "RES_FUND" para identificarlo fácilmente
                     const [newConcept] = await connection.query(
-                        "INSERT INTO expense_concepts (description) VALUES ('Fondo de Reserva')",
+                        "INSERT INTO expense_concepts (code, description) VALUES ('RES_FUND', 'Fondo de Reserva')",
                     );
                     conceptId = newConcept.insertId;
                 } else {
                     conceptId = concept[0].id;
                 }
 
-                // 4.2 Insertamos el gasto automático en building_expenses para que salga en el reporte
-                const expenseDate = `${year}-${paddedMonth}-28`; // Fecha genérica para el registro del mes
+                // 4.2 Insertamos el gasto automático (CORREGIDO: Sin la columna provider)
+                const expenseDate = `${year}-${paddedMonth}-28`;
                 await connection.query(
                     `
                     INSERT INTO building_expenses 
-                    (building_id, concept_id, provider, amount, expense_date) 
-                    VALUES (?, ?, ?, ?, ?)
+                    (building_id, concept_id, amount, expense_date) 
+                    VALUES (?, ?, ?, ?)
                     `,
-                    [
-                        buildingId,
-                        conceptId,
-                        "Ahorro Automático del Edificio",
-                        reserveFundAmount,
-                        expenseDate,
-                    ],
+                    [buildingId, conceptId, reserveFundAmount, expenseDate],
                 );
             }
         }
