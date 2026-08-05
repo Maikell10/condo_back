@@ -210,26 +210,33 @@ const getDashboardStats = async (req, res) => {
     }
 };
 
-module.exports = { getDashboardStats };
-
 const getOwnerDashboard = async (req, res) => {
-    const ownerId = req.user.id; // Asumiendo que el middleware de auth inyecta el user
+    // 🔑 USAMOS apartmentId EN LUGAR DE ownerId
+    const apartmentId = req.user.apartmentId;
+
+    if (!apartmentId) {
+        return res
+            .status(400)
+            .json({ message: "No se identificó el apartamento en la sesión." });
+    }
+
     try {
-        // 1. Obtener datos del apartamento y propietario
+        // 1. Obtener datos del apartamento y propietario usando el ID exacto
         const [aptData] = await db.query(
             `
             SELECT a.id, a.number, b.name as buildingName, a.alicuota
             FROM apartments a
             JOIN buildings b ON a.building_id = b.id
-            WHERE a.owner_id = ?
+            WHERE a.id = ?  -- 🔥 BÚSQUEDA EXACTA POR APARTAMENTO
             LIMIT 1`,
-            [ownerId],
+            [apartmentId],
         );
 
         if (aptData.length === 0)
             return res
                 .status(404)
                 .json({ message: "No tienes apartamentos asignados" });
+
         const apartment = aptData[0];
 
         // 2. Calcular Estado Financiero (Deuda actual)
@@ -238,7 +245,7 @@ const getOwnerDashboard = async (req, res) => {
             SELECT COALESCE(SUM(amount - paid), 0) as currentDebt, COUNT(*) as pendingCount
             FROM receipts 
             WHERE apartment_id = ? AND status IN ('PENDING', 'PARTIAL')`,
-            [apartment.id],
+            [apartmentId], // Usamos la misma variable para consistencia
         );
 
         // 3. Último Pago Verificado
@@ -248,7 +255,7 @@ const getOwnerDashboard = async (req, res) => {
             FROM payments 
             WHERE apartment_id = ? AND status = 'APPROVED'
             ORDER BY payment_date DESC LIMIT 1`,
-            [apartment.id],
+            [apartmentId],
         );
 
         res.json({
@@ -270,6 +277,7 @@ const getOwnerDashboard = async (req, res) => {
             },
         });
     } catch (error) {
+        console.error("Error en getOwnerDashboard:", error);
         res.status(500).json({ message: "Error al cargar dashboard" });
     }
 };
