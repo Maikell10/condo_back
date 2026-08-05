@@ -100,18 +100,20 @@ const generateMonthlyBilling = async (req, res) => {
                 "Este periodo ya ha sido facturado y está cerrado.",
             );
 
-        // 2. SUMAR GASTOS VARIABLES (Facturas del mes)
+        // 2. SUMAR GASTOS VARIABLES (Facturas del mes excluyendo un posible fondo de reserva previo)
         const [variableSum] = await connection.query(
             `
             SELECT COALESCE(SUM(amount), 0) as total 
             FROM building_expenses 
             WHERE building_id = ? AND MONTH(expense_date) = ? AND YEAR(expense_date) = ?
+            AND concept_id NOT IN (SELECT id FROM expense_concepts WHERE description = 'Fondo de Reserva')
         `,
             [buildingId, month, year],
         );
 
         const paddedMonth = month.toString().padStart(2, "0");
         const firstDayOfMonth = `${year}-${paddedMonth}-01`;
+
         // 3. VALIDAR Y SUMAR CONTRATOS (Gastos fijos activos)
         const [fixedSum] = await connection.query(
             `
@@ -119,30 +121,85 @@ const generateMonthlyBilling = async (req, res) => {
             FROM contracts 
             WHERE building_id = ? 
             AND is_active = 1 
-            -- Simplificamos: el contrato debe haber iniciado antes o durante el mes
-            -- y terminar después o durante el mes
             AND start_date <= LAST_DAY(?)
             AND end_date >= ?
         `,
             [buildingId, firstDayOfMonth, firstDayOfMonth],
         );
 
-        const totalToDistribute =
+        const subtotalExpenses =
             Number(variableSum[0].total) + Number(fixedSum[0].total);
 
-        if (totalToDistribute <= 0) {
+        if (subtotalExpenses <= 0) {
             throw new Error(
                 "No hay gastos registrados (facturas o contratos) para cerrar este mes.",
             );
         }
 
-        // 4. GENERAR RECIBOS POR ALÍCUOTA
+        let reserveFundAmount = 0;
+        let totalToDistribute = subtotalExpenses;
+
+        // 🔥 4. LÓGICA DEL FONDO DE RESERVA
+        // Obtenemos el admin_id del edificio para buscar su configuración
+        const [buildingInfo] = await connection.query(
+            "SELECT admin_id FROM buildings WHERE id = ?",
+            [buildingId],
+        );
+
+        if (buildingInfo.length > 0) {
+            const adminId = buildingInfo[0].admin_id;
+
+            const [settings] = await connection.query(
+                "SELECT has_reserve_fund, reserve_fund_percentage FROM admin_settings WHERE admin_id = ?",
+                [adminId],
+            );
+
+            if (settings.length > 0 && settings[0].has_reserve_fund) {
+                const percentage = Number(settings[0].reserve_fund_percentage);
+                reserveFundAmount = (subtotalExpenses * percentage) / 100;
+                totalToDistribute += reserveFundAmount;
+
+                // 4.1 Buscamos o creamos el concepto "Fondo de Reserva"
+                let [concept] = await connection.query(
+                    "SELECT id FROM expense_concepts WHERE description = 'Fondo de Reserva'",
+                );
+
+                let conceptId;
+                if (concept.length === 0) {
+                    const [newConcept] = await connection.query(
+                        "INSERT INTO expense_concepts (description) VALUES ('Fondo de Reserva')",
+                    );
+                    conceptId = newConcept.insertId;
+                } else {
+                    conceptId = concept[0].id;
+                }
+
+                // 4.2 Insertamos el gasto automático en building_expenses para que salga en el reporte
+                const expenseDate = `${year}-${paddedMonth}-28`; // Fecha genérica para el registro del mes
+                await connection.query(
+                    `
+                    INSERT INTO building_expenses 
+                    (building_id, concept_id, provider, amount, expense_date) 
+                    VALUES (?, ?, ?, ?, ?)
+                    `,
+                    [
+                        buildingId,
+                        conceptId,
+                        "Ahorro Automático del Edificio",
+                        reserveFundAmount,
+                        expenseDate,
+                    ],
+                );
+            }
+        }
+
+        // 5. GENERAR RECIBOS POR ALÍCUOTA
         const [apartments] = await connection.query(
             "SELECT id, alicuota FROM apartments WHERE building_id = ?",
             [buildingId],
         );
 
-        const issueDate = `${year}-${month.toString().padStart(2, "0")}-01`;
+        const issueDate = `${year}-${paddedMonth}-01`;
         const description = `Condominio ${month}/${year}`;
 
         for (const apt of apartments) {
@@ -157,16 +214,21 @@ const generateMonthlyBilling = async (req, res) => {
             );
         }
 
-        // 5. REGISTRAR EL CIERRE
+        // 6. REGISTRAR EL CIERRE
         await connection.query(
             "INSERT INTO billing_periods (building_id, month, year) VALUES (?, ?, ?)",
             [buildingId, month, year],
         );
 
         await connection.commit();
-        res.json({
-            message: `¡Cierre exitoso! Se generaron ${apartments.length} recibos por un total de $${totalToDistribute.toFixed(2)}.`,
-        });
+
+        // Mensaje de éxito dinámico
+        let successMessage = `¡Cierre exitoso! Se generaron ${apartments.length} recibos por un total de $${totalToDistribute.toFixed(2)}.`;
+        if (reserveFundAmount > 0) {
+            successMessage += ` (Incluye $${reserveFundAmount.toFixed(2)} de Fondo de Reserva).`;
+        }
+
+        res.json({ message: successMessage });
     } catch (error) {
         await connection.rollback();
         res.status(500).json({ message: error.message });
