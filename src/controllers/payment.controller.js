@@ -173,8 +173,7 @@ const approvePayment = async (req, res) => {
         let remainingAmount = parseFloat(payments[0].amount);
         const apartmentId = payments[0].apartment_id;
 
-        // 2. Buscar todos los recibos con deuda (PENDING o PARTIAL) ordenados por antigüedad
-        // El FOR UPDATE bloquea estas filas en la BD mientras hacemos la matemática
+        // 2. Buscar todos los recibos con deuda
         const [receipts] = await connection.query(
             "SELECT id, amount, paid FROM receipts WHERE apartment_id = ? AND status IN ('PENDING', 'PARTIAL') ORDER BY issue_date ASC FOR UPDATE",
             [apartmentId],
@@ -182,18 +181,18 @@ const approvePayment = async (req, res) => {
 
         // 3. PROCESO DE CASCADA (FIFO)
         for (let receipt of receipts) {
-            if (remainingAmount <= 0) break; // Si se agotó el dinero, salimos
+            // Evaluamos usando centavos para evitar arrastre de decimales
+            if (Math.round(remainingAmount * 100) <= 0) break;
 
             const totalAmount = parseFloat(receipt.amount);
             const alreadyPaid = parseFloat(receipt.paid || 0);
             const pendingOnThisReceipt = totalAmount - alreadyPaid;
 
-            if (pendingOnThisReceipt <= 0) continue; // Seguro por si acaso
+            if (Math.round(pendingOnThisReceipt * 100) <= 0) continue;
 
-            // Calculamos cuánto dinero se le va a inyectar a este recibo
             const allocated = Math.min(remainingAmount, pendingOnThisReceipt);
 
-            // A) Insertamos en la tabla intermedia (El cruce contable)
+            // A) Insertamos en la tabla intermedia
             await connection.query(
                 "INSERT INTO payment_receipts (payment_id, receipt_id, allocated_amount) VALUES (?, ?, ?)",
                 [id, receipt.id, allocated],
@@ -202,10 +201,11 @@ const approvePayment = async (req, res) => {
             // B) Actualizamos el recibo
             const newPaidAmount = alreadyPaid + allocated;
 
-            // Evaluamos si con este abono se pagó completo o quedó parcial
-            // Usamos .toFixed(2) para curarnos en salud con los decimales falsos de JavaScript
-            const isFullyPaid =
-                newPaidAmount.toFixed(2) >= totalAmount.toFixed(2);
+            // 🔥 CORRECCIÓN CRÍTICA: Multiplicamos por 100 y redondeamos para comparar enteros (Centavos)
+            const newPaidCents = Math.round(newPaidAmount * 100);
+            const totalCents = Math.round(totalAmount * 100);
+
+            const isFullyPaid = newPaidCents >= totalCents;
             const newStatus = isFullyPaid ? "PAID" : "PARTIAL";
 
             await connection.query(
@@ -213,8 +213,9 @@ const approvePayment = async (req, res) => {
                 [newPaidAmount, newStatus, receipt.id],
             );
 
-            // Restamos lo usado al pozo de dinero del pago
-            remainingAmount -= allocated;
+            // Restamos lo usado al pozo de dinero del pago (redondeando a 2 decimales para evitar basurilla)
+            remainingAmount =
+                Math.round((remainingAmount - allocated) * 100) / 100;
         }
 
         // 4. Marcar el reporte de pago como APROBADO
