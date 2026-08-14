@@ -18,6 +18,7 @@ const contactRoutes = require("./contact.routes");
 const tasaCambioRoutes = require("./tasaCambio.routes");
 const pollRoutes = require("./poll.routes");
 const settingsRoutes = require("./settings.routes");
+const sasRoutes = require("./sas.routes");
 
 // Definir los prefijos para cada grupo de rutas
 router.use("/auth", authRoutes);
@@ -36,6 +37,7 @@ router.use("/contact", contactRoutes);
 router.use("/tasa", tasaCambioRoutes);
 router.use("/polls", pollRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/saas", sasRoutes);
 
 // A futuro cuando crees más módulos, solo los agregas aquí:
 // const buildingRoutes = require('./building.routes');
