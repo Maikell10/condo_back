@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const saasController = require("../controllers/saas.controller");
-const { verifyToken, isAdmin } = require("../middlewares/auth.middleware"); // Ajusta a tus middlewares
+const saasController = require("../controllers/sas.controller");
+const { verifyToken, isSuperAdmin } = require("../middlewares/auth.middleware"); // Ajusta a tus middlewares
 
 // Todas las rutas están protegidas
-router.use(verifyToken, isAdmin); // Usa tu middleware que verifique que el rol sea SUPER_ADMIN
+router.use(verifyToken, isSuperAdmin); // Usa tu middleware que verifique que el rol sea SUPER_ADMIN
 
 router.get("/dashboard", saasController.getSaaSDashboard);
 router.post("/subscription", saasController.updateSubscription);
