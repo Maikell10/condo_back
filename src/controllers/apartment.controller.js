@@ -8,16 +8,24 @@ const getApartmentsByBuilding = async (req, res) => {
             SELECT 
                 a.id, 
                 a.number, 
-                u.name as ownerName, 
-                a.alicuota,
-                a.access_code,
-                -- Calculamos el balance sumando los recibos PENDING
-                COALESCE(SUM(CASE WHEN r.status = 'PENDING' THEN (r.amount - r.paid) ELSE 0 END), 0) as balance
+                a.access_code, 
+                a.alicuota, 
+                u.name as ownerName,
+                
+                -- 🔥 LA MAGIA: Sumamos la deuda de todos los recibos no pagados
+                COALESCE(SUM(r.amount - r.paid), 0) as balance
+                
             FROM apartments a
             LEFT JOIN users u ON a.owner_id = u.id
-            LEFT JOIN receipts r ON a.id = r.apartment_id
+            
+            -- Cruzamos con recibos pendientes o parciales
+            LEFT JOIN receipts r ON a.id = r.apartment_id AND r.status IN ('PENDING', 'PARTIAL')
+            
             WHERE a.building_id = ?
-            GROUP BY a.id
+            
+            -- Agrupamos por apartamento para que SUM() funcione correctamente
+            GROUP BY a.id, u.name
+            ORDER BY a.number ASC
         `;
         const [apartments] = await db.query(query, [buildingId]);
         res.json({ data: apartments });
