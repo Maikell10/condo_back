@@ -626,7 +626,6 @@ const registerAdminPayment = async (req, res) => {
         const paymentId = paymentResult.insertId;
 
         // 2. Traemos todos los recibos pendientes de este apartamento (Del más viejo al más nuevo)
-        // El "FOR UPDATE" bloquea las filas para que nadie más las modifique mientras hacemos la matemática
         const [receipts] = await connection.query(
             `SELECT id, amount, paid FROM receipts 
              WHERE apartment_id = ? AND status IN ('PENDING', 'PARTIAL') 
@@ -638,13 +637,14 @@ const registerAdminPayment = async (req, res) => {
 
         // 3. Bucle para repartir el dinero
         for (let receipt of receipts) {
-            if (remainingAmount <= 0) break; // Si ya se nos acabó el dinero, salimos del bucle
+            // 🔥 CORRECCIÓN: Comparamos en centavos para evitar arrastre de flotantes
+            if (Math.round(remainingAmount * 100) <= 0) break;
 
             const receiptAmount = parseFloat(receipt.amount);
-            const currentPaid = parseFloat(receipt.paid);
+            const currentPaid = parseFloat(receipt.paid || 0);
             const debt = receiptAmount - currentPaid;
 
-            if (debt <= 0) continue; // Por seguridad, si no debe nada, saltamos al siguiente
+            if (Math.round(debt * 100) <= 0) continue;
 
             // Calculamos cuánto le vamos a abonar a este recibo
             const allocated = Math.min(remainingAmount, debt);
@@ -658,8 +658,11 @@ const registerAdminPayment = async (req, res) => {
             // B) Actualizamos los montos y estatus del recibo
             const newPaid = currentPaid + allocated;
 
-            // Usamos .toFixed(2) para evitar problemas de decimales (ej. 100.00000001)
-            const isFullyPaid = newPaid.toFixed(2) >= receiptAmount.toFixed(2);
+            // 🔥 CORRECCIÓN CRÍTICA: Multiplicamos por 100 y redondeamos para comparar enteros (Centavos)
+            const newPaidCents = Math.round(newPaid * 100);
+            const totalCents = Math.round(receiptAmount * 100);
+
+            const isFullyPaid = newPaidCents >= totalCents;
             const newStatus = isFullyPaid ? "PAID" : "PARTIAL";
 
             await connection.query(
@@ -667,8 +670,9 @@ const registerAdminPayment = async (req, res) => {
                 [newPaid, newStatus, receipt.id],
             );
 
-            // Descontamos del dinero que nos queda en la mano
-            remainingAmount -= allocated;
+            // Descontamos del dinero que nos queda en la mano (limpiando decimales sucios)
+            remainingAmount =
+                Math.round((remainingAmount - allocated) * 100) / 100;
         }
 
         // Si después del bucle remainingAmount > 0, ese dinero queda como saldo a favor en la tabla payments
@@ -688,7 +692,7 @@ const registerAdminPayment = async (req, res) => {
                 "Error crítico al procesar el pago. Transacción revertida.",
         });
     } finally {
-        // Liberamos la conexión para que otros usuarios la puedan usar
+        // Liberamos la conexión
         if (connection) connection.release();
     }
 };
