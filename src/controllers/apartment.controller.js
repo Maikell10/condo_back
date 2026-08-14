@@ -8,28 +8,29 @@ const getApartmentsByBuilding = async (req, res) => {
             SELECT 
                 a.id, 
                 a.number, 
-                a.access_code, 
-                a.alicuota, 
-                u.name as ownerName,
-                
-                -- 🔥 LA MAGIA: Sumamos la deuda de todos los recibos no pagados
-                COALESCE(SUM(r.amount - r.paid), 0) as balance
-                
+                u.name as ownerName, 
+                a.alicuota,
+                a.access_code,
+                -- 🔥 CORRECCIÓN: Incluimos 'PARTIAL' (Abonos) y blindamos 'paid' por si viene nulo
+                COALESCE(SUM(CASE WHEN r.status IN ('PENDING', 'PARTIAL') THEN (r.amount - COALESCE(r.paid, 0)) ELSE 0 END), 0) as balance
             FROM apartments a
             LEFT JOIN users u ON a.owner_id = u.id
-            
-            -- Cruzamos con recibos pendientes o parciales
-            LEFT JOIN receipts r ON a.id = r.apartment_id AND r.status IN ('PENDING', 'PARTIAL')
-            
+            LEFT JOIN receipts r ON a.id = r.apartment_id
             WHERE a.building_id = ?
-            
-            -- Agrupamos por apartamento para que SUM() funcione correctamente
-            GROUP BY a.id, u.name
-            ORDER BY a.number ASC
+            GROUP BY a.id, a.number, u.name, a.alicuota, a.access_code
         `;
+
         const [apartments] = await db.query(query, [buildingId]);
-        res.json({ data: apartments });
+
+        // 🔥 Blindaje Extra: Nos aseguramos de que Node.js lo envíe como un Número puro y no como un String de MySQL
+        const formattedApartments = apartments.map((apt) => ({
+            ...apt,
+            balance: Number(apt.balance),
+        }));
+
+        res.json({ data: formattedApartments });
     } catch (error) {
+        console.error("Error en getApartmentsByBuilding:", error);
         res.status(500).json({ message: "Error al obtener apartamentos" });
     }
 };
