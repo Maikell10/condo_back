@@ -23,4 +23,11 @@ router.get(
     buildingController.getBuildingsByComplex, // <-- Ajusta según dónde pusiste la función
 );
 
+router.get(
+    "/complex-info",
+    authMiddleware.verifyToken,
+    authMiddleware.isBuildingAdmin,
+    buildingController.getComplexInfo,
+);
+
 module.exports = router;

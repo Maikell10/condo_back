@@ -17,5 +17,6 @@
             "path": "/api/tasa/cron/update-tasa",
             "schedule": "0 23 * * *"
         }
+       
     ]
 }

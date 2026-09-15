@@ -28,9 +28,72 @@ const getBuildingsByComplex = async (req, res) => {
     }
 };
 
+const getComplexInfo = async (req, res) => {
+    const adminId = req.user.id;
+
+    try {
+        const [asComplexAdmin] = await db.query(
+            `SELECT rc.id, rc.name, rc.direccion
+             FROM residential_complexes rc
+             WHERE rc.admin_id = ? AND rc.status = 'ACTIVE'
+             LIMIT 1`,
+            [adminId],
+        );
+
+        if (asComplexAdmin.length > 0) {
+            return res.json({ data: asComplexAdmin[0] });
+        }
+
+        const [fromBuilding] = await db.query(
+            `SELECT rc.id, rc.name, rc.direccion
+             FROM buildings b
+             INNER JOIN residential_complexes rc ON b.complex_id = rc.id
+             WHERE (b.admin_id = ? OR rc.admin_id = ?) AND b.status = 'ACTIVE'
+             LIMIT 1`,
+            [adminId, adminId],
+        );
+
+        if (fromBuilding.length > 0) {
+            return res.json({ data: fromBuilding[0] });
+        }
+
+        const [standalone] = await db.query(
+            `SELECT NULL AS id, name, address AS direccion
+             FROM buildings
+             WHERE admin_id = ? AND status = 'ACTIVE'
+             LIMIT 1`,
+            [adminId],
+        );
+
+        return res.json({
+            data: standalone[0] || { id: null, name: "", direccion: "" },
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Error al obtener el conjunto residencial.",
+        });
+    }
+};
+
 const importComplexData = async (req, res) => {
-    const complexId = 2;
-    const adminId = 6; // 🔥 REQUERIMIENTO: Todos los edificios se asignan a este admin_id
+    const complexId = 4;
+    const adminId = 1092;
+
+    const parseAlicuota = (rawValue) => {
+        if (rawValue === undefined || rawValue === null || rawValue === "") {
+            return null;
+        }
+
+        const normalized = String(rawValue).trim().replace(",", ".");
+        const parsed = Number.parseFloat(normalized);
+
+        if (Number.isNaN(parsed)) {
+            return null;
+        }
+
+        return parsed > 1 ? parsed / 100 : parsed;
+    };
 
     if (!req.file) {
         return res
@@ -73,6 +136,7 @@ const importComplexData = async (req, res) => {
                     const buildingName = row["building_name"]?.trim();
                     const aptNumber = row["apartment"]?.trim();
                     const ownerName = row["Nombre Propietario"]?.trim();
+                    const alicuota = parseAlicuota(row["alicuota"]);
 
                     let email = row["email"]?.trim();
                     email = email === "" || email === undefined ? null : email;
@@ -85,7 +149,7 @@ const importComplexData = async (req, res) => {
                     if (!buildingMap[buildingName]) {
                         // Buscamos si YA EXISTE en la base de datos
                         const [existingBuilding] = await connection.query(
-                            `SELECT id FROM buildings WHERE complex_id = ? AND name = ?`,
+                            `SELECT id FROM buildings WHERE complex_id = ? AND BINARY name = ?`,
                             [complexId, buildingName],
                         );
 
@@ -93,7 +157,6 @@ const importComplexData = async (req, res) => {
                             // Si existe, reciclamos su ID
                             buildingMap[buildingName] = existingBuilding[0].id;
                         } else {
-                            // Si NO existe, lo creamos con admin_id = 1
                             const randomHex = crypto
                                 .randomBytes(2)
                                 .toString("hex")
@@ -147,27 +210,37 @@ const importComplexData = async (req, res) => {
                     );
 
                     if (existingApt.length === 0) {
-                        // Si no existe, lo creamos
                         const accessCode = crypto
                             .randomBytes(4)
                             .toString("hex")
                             .toUpperCase();
                         await connection.query(
-                            `INSERT INTO apartments (building_id, owner_id, number, access_code, alicuota) VALUES (?, ?, ?, ?, 0)`,
-                            [currentBuildingId, ownerId, aptNumber, accessCode],
+                            `INSERT INTO apartments (building_id, owner_id, number, access_code, alicuota) VALUES (?, ?, ?, ?, ?)`,
+                            [
+                                currentBuildingId,
+                                ownerId,
+                                aptNumber,
+                                accessCode,
+                                alicuota ?? 0,
+                            ],
                         );
-                    } else if (ownerId) {
-                        // Si ya existe, solo le actualizamos el propietario por si cambió en el Excel
-                        await connection.query(
-                            `UPDATE apartments SET owner_id = ? WHERE id = ?`,
-                            [ownerId, existingApt[0].id],
-                        );
+                    } else {
+                        if (ownerId) {
+                            await connection.query(
+                                `UPDATE apartments SET owner_id = ? WHERE id = ?`,
+                                [ownerId, existingApt[0].id],
+                            );
+                        }
+
+                        if (alicuota !== null) {
+                            await connection.query(
+                                `UPDATE apartments SET alicuota = ? WHERE id = ?`,
+                                [alicuota, existingApt[0].id],
+                            );
+                        }
                     }
                 }
 
-                // ==============================
-                // 4. CALCULAR ALÍCUOTAS POR EDIFICIO
-                // ==============================
                 const buildingIds = Object.values(buildingMap);
 
                 for (const bId of buildingIds) {
@@ -207,5 +280,6 @@ const importComplexData = async (req, res) => {
 module.exports = {
     // ... tus otras exportaciones
     getBuildingsByComplex,
+    getComplexInfo,
     importComplexData,
 };
