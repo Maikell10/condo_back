@@ -209,9 +209,9 @@ const generateMonthlyBilling = async (req, res) => {
             );
         }
 
-        // 6. REGISTRAR EL CIERRE
+        // 6. REGISTRAR EL CIERRE (closed_at explícito: filas viejas a veces quedaban NULL)
         await connection.query(
-            "INSERT INTO billing_periods (building_id, month, year) VALUES (?, ?, ?)",
+            "INSERT INTO billing_periods (building_id, month, year, closed_at) VALUES (?, ?, ?, NOW())",
             [buildingId, month, year],
         );
 
@@ -424,7 +424,7 @@ const getClosedPeriods = async (req, res) => {
     const { buildingId } = req.params;
     try {
         const [periods] = await db.query(
-            "SELECT id, month, year, DATE_FORMAT(closed_at, '%d/%m/%Y %H:%i') as closed_at FROM billing_periods WHERE building_id = ? ORDER BY year DESC, month DESC",
+            "SELECT id, month, year, DATE_FORMAT(closed_at, '%Y-%m-%dT%H:%i:%s') as closed_at FROM billing_periods WHERE building_id = ? ORDER BY year DESC, month DESC",
             [buildingId],
         );
         res.json({ data: periods });
