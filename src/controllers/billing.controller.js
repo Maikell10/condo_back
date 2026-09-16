@@ -1,4 +1,5 @@
 const db = require("../db");
+const { allocateByWeights } = require("../utils/expense-split");
 
 const safeMigration = async (req, res) => {
     const connection = await db.getConnection();
@@ -336,9 +337,13 @@ const addExpense = async (req, res) => {
 
     try {
         if (buildingId === "ALL") {
-            // 1. Buscamos cuántos edificios tiene este conjunto
             const [buildings] = await db.query(
-                "SELECT id FROM buildings WHERE complex_id = ? AND status = 'ACTIVE'",
+                `SELECT b.id, COUNT(a.id) AS apt_count
+                 FROM buildings b
+                 LEFT JOIN apartments a ON a.building_id = b.id
+                 WHERE b.complex_id = ? AND b.status = 'ACTIVE'
+                 GROUP BY b.id
+                 ORDER BY b.id`,
                 [complexId],
             );
 
@@ -348,21 +353,42 @@ const addExpense = async (req, res) => {
                 });
             }
 
-            // 2. Prorrateamos (dividimos) el monto total entre la cantidad de edificios
-            const dividedAmount = (
-                parseFloat(amount) / buildings.length
-            ).toFixed(2);
+            let splitMode = "BY_BUILDING";
+            if (req.user?.id) {
+                const [settings] = await db.query(
+                    "SELECT expense_split_mode FROM admin_settings WHERE admin_id = ?",
+                    [req.user.id],
+                );
+                if (settings[0]?.expense_split_mode === "BY_APARTMENT") {
+                    splitMode = "BY_APARTMENT";
+                }
+            }
 
-            // 3. Insertamos el gasto para CADA edificio automáticamente
-            for (let b of buildings) {
+            const weights =
+                splitMode === "BY_APARTMENT"
+                    ? buildings.map((b) => Number(b.apt_count) || 0)
+                    : buildings.map(() => 1);
+
+            const shares = allocateByWeights(amount, weights);
+
+            for (let i = 0; i < buildings.length; i++) {
                 await db.query(
                     "INSERT INTO building_expenses (building_id, concept_id, amount, expense_date) VALUES (?, ?, ?, ?)",
-                    [b.id, conceptId, dividedAmount, expenseDate],
+                    [buildings[i].id, conceptId, shares[i], expenseDate],
                 );
             }
 
+            const aptTotal = buildings.reduce(
+                (sum, b) => sum + Number(b.apt_count || 0),
+                0,
+            );
+            const hint =
+                splitMode === "BY_BUILDING"
+                    ? `Se dividió en partes iguales ($${Number(shares[0] || 0).toFixed(2)} por edificio).`
+                    : `Se prorrateó por apartamento (${aptTotal} unidades). Edificios con menos aptos reciben menos cuota.`;
+
             res.status(201).json({
-                message: `Factura global registrada. Se dividió en $${dividedAmount} para cada edificio.`,
+                message: `Factura global registrada. ${hint}`,
             });
         } else {
             // Lógica normal para un solo edificio

@@ -14,7 +14,11 @@ const getSettings = async (req, res) => {
         if (settings.length === 0) {
             return res.json({
                 success: true,
-                data: { has_reserve_fund: 0, reserve_fund_percentage: 0 },
+                data: {
+                    has_reserve_fund: 0,
+                    reserve_fund_percentage: 0,
+                    expense_split_mode: "BY_BUILDING",
+                },
             });
         }
         res.json({ success: true, data: settings[0] });
@@ -26,22 +30,32 @@ const getSettings = async (req, res) => {
 // Guardar o actualizar configuraciones
 const updateSettings = async (req, res) => {
     const adminId = req.user.id;
-    const { hasReserveFund, reserveFundPercentage } = req.body;
+    const { hasReserveFund, reserveFundPercentage, expenseSplitMode } = req.body;
 
     try {
-        // 🔥 ON DUPLICATE KEY UPDATE: Si el admin_id ya existe, actualiza. Si no, lo inserta.
+        const [existing] = await db.query(
+            "SELECT expense_split_mode FROM admin_settings WHERE admin_id = ?",
+            [adminId],
+        );
+        const splitMode =
+            expenseSplitMode === "BY_APARTMENT" || expenseSplitMode === "BY_BUILDING"
+                ? expenseSplitMode
+                : existing[0]?.expense_split_mode || "BY_BUILDING";
+
         const query = `
-            INSERT INTO admin_settings (admin_id, has_reserve_fund, reserve_fund_percentage) 
-            VALUES (?, ?, ?) 
-            ON DUPLICATE KEY UPDATE 
-            has_reserve_fund = VALUES(has_reserve_fund), 
-            reserve_fund_percentage = VALUES(reserve_fund_percentage)
+            INSERT INTO admin_settings (admin_id, has_reserve_fund, reserve_fund_percentage, expense_split_mode)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            has_reserve_fund = VALUES(has_reserve_fund),
+            reserve_fund_percentage = VALUES(reserve_fund_percentage),
+            expense_split_mode = VALUES(expense_split_mode)
         `;
 
         await db.query(query, [
             adminId,
             hasReserveFund || false,
             reserveFundPercentage || 0,
+            splitMode,
         ]);
         res.json({
             success: true,
