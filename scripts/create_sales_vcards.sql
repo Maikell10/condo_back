@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS sales_vcards (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  label VARCHAR(120) NOT NULL,
+  usage_type VARCHAR(32) NOT NULL DEFAULT 'VENTAS_CAMPO',
+  full_name VARCHAR(120) NOT NULL,
+  organization VARCHAR(120) NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  tagline VARCHAR(255) NULL,
+  email VARCHAR(180) NOT NULL,
+  cell_phone VARCHAR(40) NOT NULL,
+  work_phone VARCHAR(40) NULL,
+  address_locality VARCHAR(80) NOT NULL,
+  address_country VARCHAR(80) NOT NULL,
+  website VARCHAR(255) NOT NULL,
+  note TEXT NULL,
+  photo_data MEDIUMTEXT NULL,
+  social_json JSON NULL,
+  is_published TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_sales_vcards_published (is_published)
+);
