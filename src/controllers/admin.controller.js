@@ -4,28 +4,116 @@ const csv = require("csv-parser");
 const crypto = require("crypto");
 const fs = require("fs");
 
-// Obtener todos los usuarios del sistema con info de su edificio
-// controllers/user.controller.js
+const USER_SCOPE_SQL = `
+    CASE
+        WHEN u.role = 'BUILDING_ADMIN' THEN COALESCE(
+            (SELECT rc.name FROM residential_complexes rc WHERE rc.admin_id = u.id ORDER BY rc.id LIMIT 1),
+            (SELECT b.name FROM buildings b WHERE b.admin_id = u.id ORDER BY b.id LIMIT 1),
+            'Sin asignar'
+        )
+        WHEN u.role = 'OWNER' THEN COALESCE(
+            (SELECT GROUP_CONCAT(DISTINCT b.name ORDER BY b.name SEPARATOR ', ')
+             FROM apartments a
+             INNER JOIN buildings b ON b.id = a.building_id
+             WHERE a.owner_id = u.id),
+            'Sin unidad'
+        )
+        ELSE 'Sistema Central'
+    END`;
+
+const buildUsersListFilters = (query) => {
+    const conditions = ["1 = 1"];
+    const params = [];
+
+    const status = query.status || "ALL";
+    const role = query.role || "ALL";
+    const search = query.search ? String(query.search).trim() : "";
+
+    if (status !== "ALL") {
+        conditions.push("u.status = ?");
+        params.push(status);
+    }
+    if (role !== "ALL") {
+        conditions.push("u.role = ?");
+        params.push(role);
+    }
+    if (search) {
+        conditions.push("(u.name LIKE ? OR u.email LIKE ?)");
+        const term = `%${search}%`;
+        params.push(term, term);
+    }
+
+    return { where: conditions.join(" AND "), params };
+};
+
+/** Listado paginado de usuarios (escala ~ miles de filas). */
 const getAllUsers = async (req, res) => {
     try {
-        const query = `
-            SELECT 
-                u.id, u.name, u.email, u.role, u.status,
-                -- Obtenemos el nombre del edificio a través de la relación con apartamentos
-                -- Usamos GROUP_CONCAT por si el usuario tiene propiedades en varios edificios
-                GROUP_CONCAT(DISTINCT b.name SEPARATOR ', ') as buildingName
-            FROM users u
-            LEFT JOIN apartments a ON u.id = a.owner_id
-            LEFT JOIN buildings b ON a.building_id = b.id
-            GROUP BY u.id
-            ORDER BY u.id DESC
-        `;
-        const [users] = await db.query(query);
-        res.json({ data: users });
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(
+            100,
+            Math.max(5, parseInt(req.query.limit, 10) || 25),
+        );
+        const offset = (page - 1) * limit;
+
+        const { where, params } = buildUsersListFilters(req.query);
+
+        const [[{ total }]] = await db.query(
+            `SELECT COUNT(*) AS total FROM users u WHERE ${where}`,
+            params,
+        );
+
+        const [[statsRow]] = await db.query(
+            `SELECT
+                COUNT(*) AS total,
+                SUM(u.status = 'ACTIVE') AS active,
+                SUM(u.status = 'INACTIVE') AS inactive,
+                SUM(u.role = 'SUPER_ADMIN') AS superAdmins,
+                SUM(u.role = 'BUILDING_ADMIN') AS buildingAdmins,
+                SUM(u.role = 'OWNER') AS owners
+             FROM users u
+             WHERE ${where}`,
+            params,
+        );
+
+        const [users] = await db.query(
+            `SELECT
+                u.id,
+                u.name,
+                u.email,
+                u.role,
+                u.status,
+                ${USER_SCOPE_SQL} AS buildingName
+             FROM users u
+             WHERE ${where}
+             ORDER BY u.id DESC
+             LIMIT ? OFFSET ?`,
+            [...params, limit, offset],
+        );
+
+        const totalNum = Number(total) || 0;
+
+        res.json({
+            data: users,
+            meta: {
+                page,
+                limit,
+                total: totalNum,
+                totalPages: totalNum ? Math.ceil(totalNum / limit) : 0,
+            },
+            stats: {
+                total: Number(statsRow.total) || 0,
+                active: Number(statsRow.active) || 0,
+                inactive: Number(statsRow.inactive) || 0,
+                superAdmins: Number(statsRow.superAdmins) || 0,
+                buildingAdmins: Number(statsRow.buildingAdmins) || 0,
+                owners: Number(statsRow.owners) || 0,
+            },
+        });
     } catch (error) {
-        console.error(error);
+        console.error("getAllUsers:", error);
         res.status(500).json({
-            message: "Error al obtener usuarios y sus edificios",
+            message: "Error al obtener usuarios",
         });
     }
 };
