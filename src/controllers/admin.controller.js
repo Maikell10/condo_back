@@ -110,18 +110,82 @@ const updateUser = async (req, res) => {
 
 const getBuildings = async (req, res) => {
     try {
+        const { search, status, complexId } = req.query;
+        const conditions = ["1 = 1"];
+        const params = [];
+
+        if (status && status !== "ALL") {
+            conditions.push("b.status = ?");
+            params.push(status);
+        }
+
+        if (complexId === "none") {
+            conditions.push("b.complex_id IS NULL");
+        } else if (complexId && complexId !== "ALL") {
+            conditions.push("b.complex_id = ?");
+            params.push(Number(complexId));
+        }
+
+        if (search && String(search).trim()) {
+            const term = `%${String(search).trim()}%`;
+            conditions.push(
+                "(b.name LIKE ? OR b.code LIKE ? OR b.address LIKE ? OR u.email LIKE ? OR u.name LIKE ? OR rc.name LIKE ? OR rc.direccion LIKE ?)",
+            );
+            params.push(term, term, term, term, term, term, term);
+        }
+
         const query = `
             SELECT 
-                b.id, b.code, b.name, b.status, b.address,
-                u.email as adminEmail,
-                (SELECT COUNT(*) FROM apartments WHERE building_id = b.id) as totalApartments
+                b.id,
+                b.code,
+                b.name,
+                b.status,
+                b.address,
+                b.complex_id AS complexId,
+                u.email AS adminEmail,
+                u.name AS adminName,
+                rc.name AS complexName,
+                rc.direccion AS complexAddress,
+                COALESCE(apt_counts.totalApartments, 0) AS totalApartments
             FROM buildings b
             LEFT JOIN users u ON b.admin_id = u.id
-            ORDER BY b.id DESC
+            LEFT JOIN residential_complexes rc ON b.complex_id = rc.id
+            LEFT JOIN (
+                SELECT building_id, COUNT(*) AS totalApartments
+                FROM apartments
+                GROUP BY building_id
+            ) apt_counts ON apt_counts.building_id = b.id
+            WHERE ${conditions.join(" AND ")}
+            ORDER BY 
+                CASE WHEN rc.name IS NULL THEN 1 ELSE 0 END,
+                rc.name ASC,
+                b.name ASC
         `;
-        const [buildings] = await db.query(query);
-        res.json({ data: buildings });
+
+        const [buildings] = await db.query(query, params);
+
+        const complexMap = new Map();
+        for (const row of buildings) {
+            if (row.complexId == null) continue;
+            if (!complexMap.has(row.complexId)) {
+                complexMap.set(row.complexId, {
+                    id: row.complexId,
+                    name: row.complexName,
+                    address: row.complexAddress,
+                    buildingCount: 0,
+                });
+            }
+            complexMap.get(row.complexId).buildingCount += 1;
+        }
+
+        res.json({
+            data: buildings,
+            complexes: Array.from(complexMap.values()).sort((a, b) =>
+                String(a.name || "").localeCompare(String(b.name || "")),
+            ),
+        });
     } catch (error) {
+        console.error("getBuildings:", error);
         res.status(500).json({ message: "Error al obtener los edificios" });
     }
 };
