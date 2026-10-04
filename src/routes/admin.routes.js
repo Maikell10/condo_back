@@ -54,6 +54,13 @@ router.patch(
 );
 
 router.patch(
+    "/complexes/:id/status",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.setComplexStatus,
+);
+
+router.patch(
     "/buildings/:id/admin",
     authMiddleware.verifyToken,
     authMiddleware.isSuperAdmin,

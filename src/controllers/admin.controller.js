@@ -142,14 +142,20 @@ const getBuildings = async (req, res) => {
                 b.status,
                 b.address,
                 b.complex_id AS complexId,
-                u.email AS adminEmail,
-                u.name AS adminName,
+                COALESCE(u.email, cu.email) AS adminEmail,
+                COALESCE(u.name, cu.name) AS adminName,
+                CASE
+                    WHEN b.admin_id IS NOT NULL THEN u.status
+                    WHEN rc.admin_id IS NOT NULL THEN cu.status
+                    ELSE NULL
+                END AS adminStatus,
                 rc.name AS complexName,
                 rc.direccion AS complexAddress,
                 COALESCE(apt_counts.totalApartments, 0) AS totalApartments
             FROM buildings b
             LEFT JOIN users u ON b.admin_id = u.id
             LEFT JOIN residential_complexes rc ON b.complex_id = rc.id
+            LEFT JOIN users cu ON rc.admin_id = cu.id
             LEFT JOIN (
                 SELECT building_id, COUNT(*) AS totalApartments
                 FROM apartments
@@ -201,6 +207,93 @@ const toggleBuildingStatus = async (req, res) => {
         res.json({ message: "Estado del edificio actualizado" });
     } catch (error) {
         res.status(500).json({ message: "Error al cambiar estado" });
+    }
+};
+
+/** Suspende o activa todos los edificios del conjunto y sus administradores (conjunto + por edificio). */
+const setComplexStatus = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (status !== "ACTIVE" && status !== "INACTIVE") {
+        return res.status(400).json({
+            message: "Estado inválido. Use ACTIVE o INACTIVE.",
+        });
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [[complex]] = await connection.query(
+            "SELECT id, admin_id FROM residential_complexes WHERE id = ?",
+            [id],
+        );
+        if (!complex) {
+            await connection.rollback();
+            return res.status(404).json({ message: "Conjunto no encontrado" });
+        }
+
+        const [buildingResult] = await connection.query(
+            "UPDATE buildings SET status = ? WHERE complex_id = ?",
+            [status, id],
+        );
+
+        try {
+            await connection.query(
+                "UPDATE residential_complexes SET status = ? WHERE id = ?",
+                [status, id],
+            );
+        } catch (complexStatusErr) {
+            if (complexStatusErr.code !== "ER_BAD_FIELD_ERROR") {
+                throw complexStatusErr;
+            }
+        }
+
+        const adminIds = new Set();
+        if (complex.admin_id) {
+            adminIds.add(complex.admin_id);
+        }
+        const [buildingAdmins] = await connection.query(
+            "SELECT DISTINCT admin_id FROM buildings WHERE complex_id = ? AND admin_id IS NOT NULL",
+            [id],
+        );
+        for (const row of buildingAdmins) {
+            if (row.admin_id) {
+                adminIds.add(row.admin_id);
+            }
+        }
+
+        let adminsUpdated = 0;
+        for (const adminId of adminIds) {
+            const [userResult] = await connection.query(
+                "UPDATE users SET status = ? WHERE id = ? AND role = 'BUILDING_ADMIN'",
+                [status, adminId],
+            );
+            adminsUpdated += userResult.affectedRows;
+        }
+
+        await connection.commit();
+
+        const verb =
+            status === "ACTIVE" ? "activado" : "suspendido";
+        res.json({
+            message: `Conjunto ${verb}: ${buildingResult.affectedRows} edificio(s) y ${adminsUpdated} administrador(es).`,
+            data: {
+                complexId: Number(id),
+                status,
+                buildingsUpdated: buildingResult.affectedRows,
+                adminsUpdated,
+            },
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error("setComplexStatus:", error);
+        res.status(500).json({
+            message: "Error al actualizar el estado del conjunto",
+        });
+    } finally {
+        connection.release();
     }
 };
 
@@ -563,6 +656,7 @@ module.exports = {
     updateUser,
     getBuildings,
     toggleBuildingStatus,
+    setComplexStatus,
     createBuilding,
     updateBuilding,
     assignBuildingAdmin,
