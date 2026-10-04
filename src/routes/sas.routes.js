@@ -13,6 +13,7 @@ router.use(verifyToken, isSuperAdmin); // Usa tu middleware que verifique que el
 router.get("/dashboard", saasController.getSaaSDashboard);
 router.post("/subscription", saasController.updateSubscription);
 router.post("/payment", saasController.registerPayment);
+router.get("/history", saasController.getAllPaymentHistory);
 router.get("/history/:admin_id", saasController.getPaymentHistory);
 
 module.exports = router;

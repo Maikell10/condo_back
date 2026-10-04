@@ -1,17 +1,25 @@
 const db = require("../db");
 
+const isTestSaasAccount = (email) => {
+    const e = String(email || "").toLowerCase().trim();
+    if (!e) return false;
+    if (e === "edificio1@condomanager.com") return true;
+    if (e.endsWith("@condomanager.com")) return true;
+    return /(\+test|testing|prueba|demo)@/i.test(e);
+};
+
 // ==========================================================
 // 1. Obtener listado general (Dashboard)
 // ==========================================================
 const getSaaSDashboard = async (req, res) => {
     try {
-        // Obtenemos todos los usuarios con rol BUILDING_ADMIN
-        // Cruzamos con suscripciones, y usamos subconsultas para determinar el Scope y buscar la factura actual
         const query = `
             SELECT 
                 u.id as admin_id,
                 u.name,
                 u.email,
+                u.status as account_status,
+                sub.status as subscription_status,
                 
                 -- Determinar Alcance: Buscamos si tiene complejos o edificios independientes
                 (SELECT COUNT(*) FROM residential_complexes rc WHERE rc.admin_id = u.id) as complex_count,
@@ -22,10 +30,10 @@ const getSaaSDashboard = async (req, res) => {
                 (SELECT name FROM buildings b WHERE b.admin_id = u.id LIMIT 1) as first_building_name,
                 
                 -- Datos de Suscripción (IFNULL para los que aún no tengan configuración)
-                IFNULL(s.fee_amount, 0) as feeAmount,
-                IFNULL(s.currency, 'USD') as currency,
-                IFNULL(s.local_currency, 'BS') as localCurrency,
-                s.due_days,
+                sub.fee_amount as feeAmount,
+                IFNULL(sub.currency, 'USD') as currency,
+                IFNULL(sub.local_currency, 'BS') as localCurrency,
+                sub.due_days,
                 
                 -- Factura del mes actual (Si existe)
                 i.id as current_invoice_id,
@@ -37,15 +45,12 @@ const getSaaSDashboard = async (req, res) => {
                 -- Fecha de pago si ya pagó este mes
                 (SELECT payment_date FROM saas_payments p WHERE p.invoice_id = i.id ORDER BY payment_date DESC LIMIT 1) as paymentDate
 
-            FROM users u
-            LEFT JOIN saas_subscriptions s ON u.id = s.admin_id
-            
-            -- Buscamos la factura del mes y año actual
+            FROM saas_subscriptions sub
+            INNER JOIN users u ON u.id = sub.admin_id AND u.role = 'BUILDING_ADMIN'
             LEFT JOIN saas_invoices i ON u.id = i.admin_id 
                 AND i.period_month = MONTH(CURRENT_DATE()) 
                 AND i.period_year = YEAR(CURRENT_DATE())
-
-            WHERE u.role = 'BUILDING_ADMIN'
+            ORDER BY u.name ASC
         `;
 
         const [rows] = await db.query(query);
@@ -58,6 +63,9 @@ const getSaaSDashboard = async (req, res) => {
                 id: admin.admin_id,
                 name: admin.name,
                 email: admin.email,
+                accountStatus: admin.account_status || "ACTIVE",
+                subscriptionStatus: admin.subscription_status || "ACTIVE",
+                isTestAccount: isTestSaasAccount(admin.email),
                 scope: isComplex ? "COMPLEX" : "SINGLE",
                 scopeName: isComplex
                     ? `${admin.complex_name} (${admin.building_count} Edificios)`
@@ -213,6 +221,7 @@ const getPaymentHistory = async (req, res) => {
         const query = `
             SELECT 
                 p.id, 
+                p.admin_id,
                 p.amount_paid, 
                 p.payment_method, 
                 p.reference_number, 
@@ -220,11 +229,14 @@ const getPaymentHistory = async (req, res) => {
                 p.notes,
                 i.period_month, 
                 i.period_year,
-                i.currency
+                i.currency,
+                u.name AS admin_name,
+                u.email AS admin_email
             FROM saas_payments p
             INNER JOIN saas_invoices i ON p.invoice_id = i.id
+            INNER JOIN users u ON u.id = p.admin_id
             WHERE p.admin_id = ?
-            ORDER BY p.payment_date DESC
+            ORDER BY p.payment_date DESC, p.id DESC
         `;
 
         const [history] = await db.query(query, [admin_id]);
@@ -235,6 +247,53 @@ const getPaymentHistory = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error al obtener historial de pagos",
+        });
+    }
+};
+
+const getAllPaymentHistory = async (req, res) => {
+    const { admin_id } = req.query;
+
+    try {
+        const conditions = ["1 = 1"];
+        const params = [];
+
+        if (admin_id) {
+            conditions.push("p.admin_id = ?");
+            params.push(Number(admin_id));
+        }
+
+        const query = `
+            SELECT 
+                p.id,
+                p.admin_id,
+                p.amount_paid,
+                p.payment_method,
+                p.reference_number,
+                p.payment_date,
+                p.notes,
+                i.period_month,
+                i.period_year,
+                i.currency,
+                u.name AS admin_name,
+                u.email AS admin_email,
+                (SELECT rc.name FROM residential_complexes rc WHERE rc.admin_id = u.id LIMIT 1) AS complex_name,
+                (SELECT b.name FROM buildings b WHERE b.admin_id = u.id LIMIT 1) AS building_name
+            FROM saas_payments p
+            INNER JOIN saas_invoices i ON p.invoice_id = i.id
+            INNER JOIN users u ON u.id = p.admin_id
+            WHERE ${conditions.join(" AND ")}
+            ORDER BY p.payment_date DESC, p.id DESC
+            LIMIT 500
+        `;
+
+        const [history] = await db.query(query, params);
+        res.json({ success: true, data: history });
+    } catch (error) {
+        console.error("Error en getAllPaymentHistory:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error al obtener el historial de cobranza",
         });
     }
 };
@@ -336,5 +395,6 @@ module.exports = {
     updateSubscription,
     registerPayment,
     getPaymentHistory,
+    getAllPaymentHistory,
     generateMonthlyInvoices,
 };
