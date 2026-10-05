@@ -2,14 +2,24 @@ const db = require("../db");
 const {
     SAAS_TZ_OFFSET_HOURS,
     getSaasCalendarParts,
+    getSaasBillingPeriodForCreation,
     saasDueDateYmd,
 } = require("../utils/saas-time");
 
-const saasPeriodSql = `
-    MONTH(DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${Number(SAAS_TZ_OFFSET_HOURS) || 0} HOUR))
+const saasOffset = Number(SAAS_TZ_OFFSET_HOURS) || 0;
+const saasNowSql = `DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${saasOffset} HOUR)`;
+const SAAS_TEST_USER_EXCLUDE_SQL = `
+    NOT (
+        LOWER(TRIM(u.email)) = 'edificio1@condomanager.com'
+        OR LOWER(TRIM(u.email)) LIKE '%@condomanager.com'
+    )
 `;
-const saasYearSql = `
-    YEAR(DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${Number(SAAS_TZ_OFFSET_HOURS) || 0} HOUR))
+/** Periodo facturado = mes anterior al calendario SaaS actual */
+const saasBillablePeriodMonthSql = `
+    IF(MONTH(${saasNowSql}) = 1, 12, MONTH(${saasNowSql}) - 1)
+`;
+const saasBillablePeriodYearSql = `
+    IF(MONTH(${saasNowSql}) = 1, YEAR(${saasNowSql}) - 1, YEAR(${saasNowSql}))
 `;
 
 const isTestSaasAccount = (email) => {
@@ -81,8 +91,9 @@ const formatSaasDashboardRow = (admin) => {
 
         currentPeriod: {
             month: (() => {
-                const { year, month } = getSaasCalendarParts();
-                return new Date(Date.UTC(year, month - 1, 1))
+                const { periodYear, periodMonth } =
+                    getSaasBillingPeriodForCreation();
+                return new Date(Date.UTC(periodYear, periodMonth - 1, 1))
                     .toLocaleString("es-ES", {
                         month: "long",
                         year: "numeric",
@@ -142,8 +153,8 @@ const getSaaSDashboard = async (req, res) => {
             FROM saas_subscriptions sub
             INNER JOIN users u ON u.id = sub.admin_id
             LEFT JOIN saas_invoices i ON u.id = i.admin_id 
-                AND i.period_month = ${saasPeriodSql}
-                AND i.period_year = ${saasYearSql}
+                AND i.period_month = ${saasBillablePeriodMonthSql}
+                AND i.period_year = ${saasBillablePeriodYearSql}
         `;
 
         const [subscriptionRows] = await db.query(subscriptionQuery);
@@ -197,7 +208,25 @@ const getSaaSDashboard = async (req, res) => {
 
         const formattedData = allRows.map((row) => formatSaasDashboardRow(row));
 
-        res.json({ success: true, data: formattedData });
+        const [[collectionRow]] = await db.query(
+            `SELECT COALESCE(SUM(p.amount_paid), 0) AS collected_this_month
+             FROM saas_payments p
+             INNER JOIN users u ON u.id = p.admin_id
+             WHERE u.status = 'ACTIVE'
+               AND ${SAAS_TEST_USER_EXCLUDE_SQL}
+               AND YEAR(p.payment_date) = YEAR(${saasNowSql})
+               AND MONTH(p.payment_date) = MONTH(${saasNowSql})`,
+        );
+
+        res.json({
+            success: true,
+            data: formattedData,
+            stats: {
+                collectedThisMonth: Number(
+                    collectionRow?.collected_this_month || 0,
+                ),
+            },
+        });
     } catch (error) {
         console.error("Error en getSaaSDashboard:", error);
         res.status(500).json({
@@ -345,6 +374,110 @@ const registerPayment = async (req, res) => {
 // ==========================================================
 // 4. Facturas de un administrador (todas)
 // ==========================================================
+const getInvoiceDocument = async (req, res) => {
+    const invoiceId = Number(req.params.invoice_id);
+    if (!invoiceId) {
+        return res.status(400).json({
+            success: false,
+            message: "invoice_id inválido",
+        });
+    }
+
+    try {
+        const query = `
+            SELECT
+                i.id,
+                i.admin_id,
+                i.period_month,
+                i.period_year,
+                i.fee_amount,
+                i.currency,
+                i.issue_date,
+                i.due_date,
+                i.status,
+                u.name AS admin_name,
+                u.email AS admin_email,
+                (SELECT rc.name FROM residential_complexes rc
+                    WHERE rc.admin_id = u.id AND rc.status = 'ACTIVE' LIMIT 1) AS complex_name,
+                (SELECT rc.direccion FROM residential_complexes rc
+                    WHERE rc.admin_id = u.id AND rc.status = 'ACTIVE' LIMIT 1) AS complex_address,
+                (SELECT b.name FROM buildings b
+                    WHERE b.admin_id = u.id AND b.status = 'ACTIVE' LIMIT 1) AS building_name,
+                (SELECT b.address FROM buildings b
+                    WHERE b.admin_id = u.id AND b.status = 'ACTIVE' LIMIT 1) AS building_address,
+                (SELECT p.amount_paid FROM saas_payments p
+                    WHERE p.invoice_id = i.id
+                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) AS amount_paid,
+                (SELECT p.payment_method FROM saas_payments p
+                    WHERE p.invoice_id = i.id
+                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) AS payment_method,
+                (SELECT p.reference_number FROM saas_payments p
+                    WHERE p.invoice_id = i.id
+                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) AS reference_number,
+                (SELECT p.payment_date FROM saas_payments p
+                    WHERE p.invoice_id = i.id
+                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) AS payment_date
+            FROM saas_invoices i
+            INNER JOIN users u ON u.id = i.admin_id
+            WHERE i.id = ?
+        `;
+        const [rows] = await db.query(query, [invoiceId]);
+        if (!rows.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Factura no encontrada",
+            });
+        }
+
+        const row = rows[0];
+        const clientName =
+            row.complex_name || row.building_name || row.admin_name;
+        const clientAddress =
+            row.complex_address || row.building_address || "";
+
+        res.json({
+            success: true,
+            data: {
+                invoice: {
+                    id: row.id,
+                    adminId: row.admin_id,
+                    periodMonth: row.period_month,
+                    periodYear: row.period_year,
+                    feeAmount: Number(row.fee_amount),
+                    currency: row.currency,
+                    issueDate: row.issue_date,
+                    dueDate: row.due_date,
+                    status: row.status,
+                    number: String(row.id).padStart(4, "0"),
+                },
+                client: {
+                    name: clientName,
+                    address: clientAddress,
+                    contactName: row.admin_name,
+                    email: row.admin_email,
+                    rif: "",
+                    phone: "",
+                },
+                payment:
+                    row.status === "PAID"
+                        ? {
+                              amountPaid: Number(row.amount_paid || 0),
+                              method: row.payment_method,
+                              reference: row.reference_number,
+                              paymentDate: row.payment_date,
+                          }
+                        : null,
+            },
+        });
+    } catch (error) {
+        console.error("Error en getInvoiceDocument:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error al obtener datos de la factura",
+        });
+    }
+};
+
 const getAdminInvoices = async (req, res) => {
     const adminId = Number(req.params.admin_id);
     if (!adminId) {
@@ -475,8 +608,14 @@ const getAllPaymentHistory = async (req, res) => {
 // 5. CRON JOB: Generación Automática de Facturas SaaS
 // ==========================================================
 const generateMonthlyInvoices = async (req, res) => {
-    const { year: periodYear, month: periodMonth, ymd: todayStr, issueDateYmd: issueDateStr } =
-        getSaasCalendarParts();
+    const {
+        periodYear,
+        periodMonth,
+        issueYear,
+        issueMonth,
+        issueDateYmd: issueDateStr,
+        ymd: todayStr,
+    } = getSaasBillingPeriodForCreation();
 
     const connection = await db.getConnection();
 
@@ -511,8 +650,8 @@ const generateMonthlyInvoices = async (req, res) => {
 
             if (existingInvoice.length === 0) {
                 const dueDateStr = saasDueDateYmd(
-                    periodYear,
-                    periodMonth,
+                    issueYear,
+                    issueMonth,
                     sub.due_days,
                 );
 
@@ -562,6 +701,7 @@ module.exports = {
     updateSubscription,
     registerPayment,
     getAdminInvoices,
+    getInvoiceDocument,
     getPaymentHistory,
     getAllPaymentHistory,
     generateMonthlyInvoices,

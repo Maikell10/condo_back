@@ -20,6 +20,7 @@ router.post("/subscription", saasController.updateSubscription);
 router.post("/payment", saasController.registerPayment);
 router.get("/history", saasController.getAllPaymentHistory);
 router.get("/history/:admin_id", saasController.getPaymentHistory);
+router.get("/invoice-document/:invoice_id", saasController.getInvoiceDocument);
 router.get("/invoices/:admin_id", saasController.getAdminInvoices);
 
 module.exports = router;

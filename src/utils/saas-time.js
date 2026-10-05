@@ -28,8 +28,33 @@ const saasDueDateYmd = (year, month, dueDays) => {
     return `${year}-${pad2(month)}-${pad2(day)}`;
 };
 
+/**
+ * Factura generada en el mes calendario M/Y cubre el periodo M-1/Y
+ * (ej. octubre 2026 → period 09/2026; enero 2027 → period 12/2026).
+ * issue_date = día 1 del mes de emisión (M); due_date en ese mismo mes.
+ */
+const getSaasBillingPeriodForCreation = (date = new Date()) => {
+    const { year, month, ymd } = getSaasCalendarParts(date);
+    let periodMonth = month - 1;
+    let periodYear = year;
+    if (periodMonth < 1) {
+        periodMonth = 12;
+        periodYear = year - 1;
+    }
+    const issueDateYmd = `${year}-${pad2(month)}-01`;
+    return {
+        periodYear,
+        periodMonth,
+        issueYear: year,
+        issueMonth: month,
+        issueDateYmd,
+        ymd,
+    };
+};
+
 module.exports = {
     SAAS_TZ_OFFSET_HOURS,
     getSaasCalendarParts,
+    getSaasBillingPeriodForCreation,
     saasDueDateYmd,
 };
