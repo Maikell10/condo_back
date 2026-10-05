@@ -114,10 +114,18 @@ const formatSaasDashboardRow = (admin) => {
                     })
                     .toUpperCase();
             })(),
-            status: admin.invoice_status || (isTest ? "PAID" : "PENDING"),
+            status: (() => {
+                if (isTest) return "PAID";
+                if (accountStatus !== "ACTIVE") return "INACTIVE";
+                const totalInv = Number(admin.total_invoice_count || 0);
+                if (!admin.invoice_status && totalInv === 0) return "NONE";
+                return admin.invoice_status || "PENDING";
+            })(),
             dueDate: admin.due_date,
             paymentDate: admin.paymentDate,
         },
+
+        totalInvoices: Number(admin.total_invoice_count || 0),
 
         openInvoices: {
             count: Number(admin.open_invoice_count || 0),
@@ -166,7 +174,9 @@ const getSaaSDashboard = async (req, res) => {
                 (SELECT payment_date FROM saas_payments p WHERE p.invoice_id = i.id ORDER BY payment_date DESC LIMIT 1) as paymentDate,
                 (SELECT p.payment_date FROM saas_payments p
                     WHERE p.admin_id = u.id
-                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) as last_payment_date
+                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) as last_payment_date,
+                (SELECT COUNT(*) FROM saas_invoices oi
+                    WHERE oi.admin_id = u.id) as total_invoice_count
             FROM saas_subscriptions sub
             INNER JOIN users u ON u.id = sub.admin_id
             LEFT JOIN saas_invoices i ON u.id = i.admin_id 
@@ -206,7 +216,8 @@ const getSaaSDashboard = async (req, res) => {
                 NULL as invoice_status,
                 NULL as due_date,
                 NULL as paymentDate,
-                NULL as last_payment_date
+                NULL as last_payment_date,
+                0 as total_invoice_count
             FROM users u
             WHERE u.role = 'BUILDING_ADMIN'
               AND (
