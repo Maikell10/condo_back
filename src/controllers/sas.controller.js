@@ -8,95 +8,127 @@ const isTestSaasAccount = (email) => {
     return /(\+test|testing|prueba|demo)@/i.test(e);
 };
 
+const SAAS_ADMIN_SCOPE_SQL = `
+    (SELECT COUNT(*) FROM residential_complexes rc WHERE rc.admin_id = u.id) as complex_count,
+    (SELECT COUNT(*) FROM buildings b WHERE b.admin_id = u.id) as building_count,
+    (SELECT name FROM residential_complexes rc WHERE rc.admin_id = u.id LIMIT 1) as complex_name,
+    (SELECT name FROM buildings b WHERE b.admin_id = u.id LIMIT 1) as first_building_name
+`;
+
+const formatSaasDashboardRow = (admin) => {
+    const isComplex = admin.complex_count > 0;
+    const isTest = isTestSaasAccount(admin.email);
+    const accountStatus = admin.account_status || "ACTIVE";
+    const includeInMetrics = accountStatus === "ACTIVE" && !isTest;
+
+    return {
+        id: admin.admin_id,
+        name: admin.name,
+        email: admin.email,
+        accountStatus,
+        subscriptionStatus: admin.subscription_status || "ACTIVE",
+        isTestAccount: isTest,
+        includeInMetrics,
+        hasSubscription: !!admin.has_subscription,
+        scope: isComplex ? "COMPLEX" : "SINGLE",
+        scopeName: isComplex
+            ? `${admin.complex_name} (${admin.building_count} Edificios)`
+            : admin.first_building_name || "Sin Edificios Asignados",
+
+        billingConfig: {
+            feeAmount: Number(admin.feeAmount || 0),
+            currency: admin.currency || "USD",
+            localCurrency: admin.localCurrency || "BS",
+            exchangeRate: 1,
+        },
+
+        currentPeriod: {
+            month: new Date()
+                .toLocaleString("es-ES", {
+                    month: "long",
+                    year: "numeric",
+                })
+                .toUpperCase(),
+            status: admin.invoice_status || (isTest ? "PAID" : "PENDING"),
+            dueDate: admin.due_date,
+            paymentDate: admin.paymentDate,
+        },
+    };
+};
+
 // ==========================================================
 // 1. Obtener listado general (Dashboard)
 // ==========================================================
 const getSaaSDashboard = async (req, res) => {
     try {
-        const query = `
+        const subscriptionQuery = `
             SELECT 
                 u.id as admin_id,
                 u.name,
                 u.email,
                 u.status as account_status,
                 sub.status as subscription_status,
-                
-                -- Determinar Alcance: Buscamos si tiene complejos o edificios independientes
-                (SELECT COUNT(*) FROM residential_complexes rc WHERE rc.admin_id = u.id) as complex_count,
-                (SELECT COUNT(*) FROM buildings b WHERE b.admin_id = u.id) as building_count,
-                
-                -- Nombres para el Frontend
-                (SELECT name FROM residential_complexes rc WHERE rc.admin_id = u.id LIMIT 1) as complex_name,
-                (SELECT name FROM buildings b WHERE b.admin_id = u.id LIMIT 1) as first_building_name,
-                
-                -- Datos de Suscripción (IFNULL para los que aún no tengan configuración)
+                1 as has_subscription,
+                ${SAAS_ADMIN_SCOPE_SQL},
                 sub.fee_amount as feeAmount,
                 IFNULL(sub.currency, 'USD') as currency,
                 IFNULL(sub.local_currency, 'BS') as localCurrency,
                 sub.due_days,
-                
-                -- Factura del mes actual (Si existe)
                 i.id as current_invoice_id,
                 i.period_month,
                 i.period_year,
                 i.status as invoice_status,
                 i.due_date,
-                
-                -- Fecha de pago si ya pagó este mes
                 (SELECT payment_date FROM saas_payments p WHERE p.invoice_id = i.id ORDER BY payment_date DESC LIMIT 1) as paymentDate
-
             FROM saas_subscriptions sub
             INNER JOIN users u ON u.id = sub.admin_id
             LEFT JOIN saas_invoices i ON u.id = i.admin_id 
                 AND i.period_month = MONTH(CURRENT_DATE()) 
                 AND i.period_year = YEAR(CURRENT_DATE())
-            ORDER BY u.name ASC
         `;
 
-        const [rows] = await db.query(query);
+        const [subscriptionRows] = await db.query(subscriptionQuery);
 
-        // Formateamos los datos para que Angular (Frontend) los reciba exactamente como en los Mocks
-        const formattedData = rows.map((admin) => {
-            const isComplex = admin.complex_count > 0;
-            const isTest = isTestSaasAccount(admin.email);
-            const accountStatus = admin.account_status || "ACTIVE";
-            const includeInMetrics =
-                accountStatus === "ACTIVE" && !isTest;
+        const subscribedIds = subscriptionRows.map((r) => r.admin_id);
 
-            return {
-                id: admin.admin_id,
-                name: admin.name,
-                email: admin.email,
-                accountStatus,
-                subscriptionStatus: admin.subscription_status || "ACTIVE",
-                isTestAccount: isTest,
-                includeInMetrics,
-                scope: isComplex ? "COMPLEX" : "SINGLE",
-                scopeName: isComplex
-                    ? `${admin.complex_name} (${admin.building_count} Edificios)`
-                    : admin.first_building_name || "Sin Edificios Asignados",
+        // Cuentas demo (ej. edificio1@condomanager.com) sin fila en saas_subscriptions
+        const testOnlyQuery = `
+            SELECT 
+                u.id as admin_id,
+                u.name,
+                u.email,
+                u.status as account_status,
+                NULL as subscription_status,
+                0 as has_subscription,
+                ${SAAS_ADMIN_SCOPE_SQL},
+                0 as feeAmount,
+                'USD' as currency,
+                'BS' as localCurrency,
+                NULL as due_days,
+                NULL as current_invoice_id,
+                NULL as period_month,
+                NULL as period_year,
+                NULL as invoice_status,
+                NULL as due_date,
+                NULL as paymentDate
+            FROM users u
+            WHERE u.role = 'BUILDING_ADMIN'
+              AND (
+                LOWER(TRIM(u.email)) = 'edificio1@condomanager.com'
+                OR LOWER(TRIM(u.email)) LIKE '%@condomanager.com'
+              )
+              ${subscribedIds.length ? "AND u.id NOT IN (?)" : ""}
+        `;
 
-                billingConfig: {
-                    feeAmount: Number(admin.feeAmount),
-                    currency: admin.currency,
-                    localCurrency: admin.localCurrency,
-                    exchangeRate: 1, // Aquí podrías integrar una API de cambio de divisas en el futuro
-                },
+        const [testRows] = subscribedIds.length
+            ? await db.query(testOnlyQuery, [subscribedIds])
+            : await db.query(testOnlyQuery);
 
-                currentPeriod: {
-                    month: new Date()
-                        .toLocaleString("es-ES", {
-                            month: "long",
-                            year: "numeric",
-                        })
-                        .toUpperCase(),
-                    // Si no tiene factura generada, por defecto es PENDING
-                    status: admin.invoice_status || "PENDING",
-                    dueDate: admin.due_date,
-                    paymentDate: admin.paymentDate,
-                },
-            };
-        });
+        const allRows = [...subscriptionRows, ...testRows].sort((a, b) =>
+            String(a.name || "").localeCompare(String(b.name || ""), "es"),
+        );
+
+        const formattedData = allRows.map((row) => formatSaasDashboardRow(row));
 
         res.json({ success: true, data: formattedData });
     } catch (error) {
