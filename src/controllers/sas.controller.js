@@ -62,6 +62,19 @@ const SAAS_OPEN_INVOICE_SUMMARY_SQL = `
         ORDER BY oi.issue_date ASC LIMIT 1) as next_invoice_status
 `;
 
+const compareSaasRowsByLastPayment = (a, b) => {
+    const toTime = (row) => {
+        const raw = row?.last_payment_date;
+        if (!raw) return 0;
+        const s = String(raw).slice(0, 10);
+        const t = Date.parse(`${s}T12:00:00Z`);
+        return Number.isNaN(t) ? 0 : t;
+    };
+    const diff = toTime(b) - toTime(a);
+    if (diff !== 0) return diff;
+    return String(a.name || "").localeCompare(String(b.name || ""), "es");
+};
+
 const formatSaasDashboardRow = (admin) => {
     const isComplex = admin.complex_count > 0;
     const isTest = isTestSaasAccount(admin.email);
@@ -122,6 +135,7 @@ const formatSaasDashboardRow = (admin) => {
                   status: admin.next_invoice_status || "PENDING",
               }
             : null,
+        lastPaymentDate: admin.last_payment_date || null,
     };
 };
 
@@ -149,7 +163,10 @@ const getSaaSDashboard = async (req, res) => {
                 i.period_year,
                 i.status as invoice_status,
                 i.due_date,
-                (SELECT payment_date FROM saas_payments p WHERE p.invoice_id = i.id ORDER BY payment_date DESC LIMIT 1) as paymentDate
+                (SELECT payment_date FROM saas_payments p WHERE p.invoice_id = i.id ORDER BY payment_date DESC LIMIT 1) as paymentDate,
+                (SELECT p.payment_date FROM saas_payments p
+                    WHERE p.admin_id = u.id
+                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) as last_payment_date
             FROM saas_subscriptions sub
             INNER JOIN users u ON u.id = sub.admin_id
             LEFT JOIN saas_invoices i ON u.id = i.admin_id 
@@ -188,7 +205,8 @@ const getSaaSDashboard = async (req, res) => {
                 NULL as period_year,
                 NULL as invoice_status,
                 NULL as due_date,
-                NULL as paymentDate
+                NULL as paymentDate,
+                NULL as last_payment_date
             FROM users u
             WHERE u.role = 'BUILDING_ADMIN'
               AND (
@@ -202,8 +220,8 @@ const getSaaSDashboard = async (req, res) => {
             ? await db.query(testOnlyQuery, [subscribedIds])
             : await db.query(testOnlyQuery);
 
-        const allRows = [...subscriptionRows, ...testRows].sort((a, b) =>
-            String(a.name || "").localeCompare(String(b.name || ""), "es"),
+        const allRows = [...subscriptionRows, ...testRows].sort(
+            compareSaasRowsByLastPayment,
         );
 
         const formattedData = allRows.map((row) => formatSaasDashboardRow(row));
