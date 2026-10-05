@@ -1,4 +1,16 @@
 const db = require("../db");
+const {
+    SAAS_TZ_OFFSET_HOURS,
+    getSaasCalendarParts,
+    saasDueDateYmd,
+} = require("../utils/saas-time");
+
+const saasPeriodSql = `
+    MONTH(DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${Number(SAAS_TZ_OFFSET_HOURS) || 0} HOUR))
+`;
+const saasYearSql = `
+    YEAR(DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${Number(SAAS_TZ_OFFSET_HOURS) || 0} HOUR))
+`;
 
 const isTestSaasAccount = (email) => {
     const e = String(email || "").toLowerCase().trim();
@@ -13,6 +25,31 @@ const SAAS_ADMIN_SCOPE_SQL = `
     (SELECT COUNT(*) FROM buildings b WHERE b.admin_id = u.id) as building_count,
     (SELECT name FROM residential_complexes rc WHERE rc.admin_id = u.id LIMIT 1) as complex_name,
     (SELECT name FROM buildings b WHERE b.admin_id = u.id LIMIT 1) as first_building_name
+`;
+
+const SAAS_OPEN_INVOICE_SUMMARY_SQL = `
+    (SELECT COUNT(*) FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')) as open_invoice_count,
+    (SELECT COALESCE(SUM(oi.fee_amount), 0) FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')) as open_balance,
+    (SELECT oi.id FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')
+        ORDER BY oi.issue_date ASC LIMIT 1) as next_invoice_id,
+    (SELECT oi.period_month FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')
+        ORDER BY oi.issue_date ASC LIMIT 1) as next_period_month,
+    (SELECT oi.period_year FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')
+        ORDER BY oi.issue_date ASC LIMIT 1) as next_period_year,
+    (SELECT oi.fee_amount FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')
+        ORDER BY oi.issue_date ASC LIMIT 1) as next_fee_amount,
+    (SELECT oi.due_date FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')
+        ORDER BY oi.issue_date ASC LIMIT 1) as next_due_date,
+    (SELECT oi.status FROM saas_invoices oi
+        WHERE oi.admin_id = u.id AND oi.status IN ('PENDING', 'OVERDUE')
+        ORDER BY oi.issue_date ASC LIMIT 1) as next_invoice_status
 `;
 
 const formatSaasDashboardRow = (admin) => {
@@ -43,16 +80,37 @@ const formatSaasDashboardRow = (admin) => {
         },
 
         currentPeriod: {
-            month: new Date()
-                .toLocaleString("es-ES", {
-                    month: "long",
-                    year: "numeric",
-                })
-                .toUpperCase(),
+            month: (() => {
+                const { year, month } = getSaasCalendarParts();
+                return new Date(Date.UTC(year, month - 1, 1))
+                    .toLocaleString("es-ES", {
+                        month: "long",
+                        year: "numeric",
+                        timeZone: "UTC",
+                    })
+                    .toUpperCase();
+            })(),
             status: admin.invoice_status || (isTest ? "PAID" : "PENDING"),
             dueDate: admin.due_date,
             paymentDate: admin.paymentDate,
         },
+
+        openInvoices: {
+            count: Number(admin.open_invoice_count || 0),
+            totalAmount: Number(admin.open_balance || 0),
+            currency: admin.currency || "USD",
+        },
+        nextOpenInvoice: admin.next_invoice_id
+            ? {
+                  id: admin.next_invoice_id,
+                  periodMonth: admin.next_period_month,
+                  periodYear: admin.next_period_year,
+                  feeAmount: Number(admin.next_fee_amount || 0),
+                  currency: admin.currency || "USD",
+                  dueDate: admin.next_due_date,
+                  status: admin.next_invoice_status || "PENDING",
+              }
+            : null,
     };
 };
 
@@ -74,6 +132,7 @@ const getSaaSDashboard = async (req, res) => {
                 IFNULL(sub.currency, 'USD') as currency,
                 IFNULL(sub.local_currency, 'BS') as localCurrency,
                 sub.due_days,
+                ${SAAS_OPEN_INVOICE_SUMMARY_SQL},
                 i.id as current_invoice_id,
                 i.period_month,
                 i.period_year,
@@ -83,8 +142,8 @@ const getSaaSDashboard = async (req, res) => {
             FROM saas_subscriptions sub
             INNER JOIN users u ON u.id = sub.admin_id
             LEFT JOIN saas_invoices i ON u.id = i.admin_id 
-                AND i.period_month = MONTH(CURRENT_DATE()) 
-                AND i.period_year = YEAR(CURRENT_DATE())
+                AND i.period_month = ${saasPeriodSql}
+                AND i.period_year = ${saasYearSql}
         `;
 
         const [subscriptionRows] = await db.query(subscriptionQuery);
@@ -105,6 +164,14 @@ const getSaaSDashboard = async (req, res) => {
                 'USD' as currency,
                 'BS' as localCurrency,
                 NULL as due_days,
+                0 as open_invoice_count,
+                0 as open_balance,
+                NULL as next_invoice_id,
+                NULL as next_period_month,
+                NULL as next_period_year,
+                NULL as next_fee_amount,
+                NULL as next_due_date,
+                NULL as next_invoice_status,
                 NULL as current_invoice_id,
                 NULL as period_month,
                 NULL as period_year,
@@ -185,6 +252,7 @@ const updateSubscription = async (req, res) => {
 const registerPayment = async (req, res) => {
     const {
         admin_id,
+        invoice_id,
         amount_paid,
         payment_method,
         reference_number,
@@ -196,19 +264,38 @@ const registerPayment = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // Buscamos la factura no pagada más antigua de ese admin (Lógica FIFO)
-        const [invoices] = await connection.query(
-            "SELECT id FROM saas_invoices WHERE admin_id = ? AND status IN ('PENDING', 'OVERDUE') ORDER BY issue_date ASC LIMIT 1 FOR UPDATE",
-            [admin_id],
-        );
-
-        if (invoices.length === 0) {
-            throw new Error(
-                "El cliente no tiene facturas pendientes o en mora.",
+        let invoiceRow;
+        if (invoice_id) {
+            const [invoices] = await connection.query(
+                `SELECT id, period_month, period_year, fee_amount, currency
+                 FROM saas_invoices
+                 WHERE id = ? AND admin_id = ? AND status IN ('PENDING', 'OVERDUE')
+                 FOR UPDATE`,
+                [invoice_id, admin_id],
             );
+            if (invoices.length === 0) {
+                throw new Error(
+                    "La factura indicada no existe, no pertenece al cliente o ya está pagada.",
+                );
+            }
+            invoiceRow = invoices[0];
+        } else {
+            const [invoices] = await connection.query(
+                `SELECT id, period_month, period_year, fee_amount, currency
+                 FROM saas_invoices
+                 WHERE admin_id = ? AND status IN ('PENDING', 'OVERDUE')
+                 ORDER BY issue_date ASC LIMIT 1 FOR UPDATE`,
+                [admin_id],
+            );
+            if (invoices.length === 0) {
+                throw new Error(
+                    "El cliente no tiene facturas pendientes o en mora.",
+                );
+            }
+            invoiceRow = invoices[0];
         }
 
-        const invoiceId = invoices[0].id;
+        const invoiceId = invoiceRow.id;
 
         // Insertamos el registro del pago
         await connection.query(
@@ -234,7 +321,14 @@ const registerPayment = async (req, res) => {
         await connection.commit();
         res.json({
             success: true,
-            message: "Pago registrado y factura solventada.",
+            message: `Pago aplicado a factura ${String(invoiceRow.period_month).padStart(2, "0")}/${invoiceRow.period_year}.`,
+            data: {
+                invoice_id: invoiceId,
+                period_month: invoiceRow.period_month,
+                period_year: invoiceRow.period_year,
+                amount_paid,
+                currency: invoiceRow.currency,
+            },
         });
     } catch (error) {
         await connection.rollback();
@@ -249,7 +343,49 @@ const registerPayment = async (req, res) => {
 };
 
 // ==========================================================
-// 4. Obtener el Historial de Pagos de un Admin
+// 4. Facturas de un administrador (todas)
+// ==========================================================
+const getAdminInvoices = async (req, res) => {
+    const adminId = Number(req.params.admin_id);
+    if (!adminId) {
+        return res.status(400).json({
+            success: false,
+            message: "admin_id inválido",
+        });
+    }
+
+    try {
+        const query = `
+            SELECT
+                i.id,
+                i.admin_id,
+                i.period_month,
+                i.period_year,
+                i.fee_amount,
+                i.currency,
+                i.issue_date,
+                i.due_date,
+                i.status,
+                (SELECT p.payment_date FROM saas_payments p
+                    WHERE p.invoice_id = i.id
+                    ORDER BY p.payment_date DESC, p.id DESC LIMIT 1) AS payment_date
+            FROM saas_invoices i
+            WHERE i.admin_id = ?
+            ORDER BY i.period_year DESC, i.period_month DESC, i.id DESC
+        `;
+        const [rows] = await db.query(query, [adminId]);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error("Error en getAdminInvoices:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error al obtener facturas del administrador",
+        });
+    }
+};
+
+// ==========================================================
+// 5. Obtener el Historial de Pagos de un Admin
 // ==========================================================
 const getPaymentHistory = async (req, res) => {
     const { admin_id } = req.params;
@@ -339,20 +475,21 @@ const getAllPaymentHistory = async (req, res) => {
 // 5. CRON JOB: Generación Automática de Facturas SaaS
 // ==========================================================
 const generateMonthlyInvoices = async (req, res) => {
-    // Definimos el mes y el año actual
-    const currentDate = new Date();
-    const periodMonth = currentDate.getMonth() + 1; // getMonth() devuelve 0-11
-    const periodYear = currentDate.getFullYear();
-    const issueDateStr = `${periodYear}-${periodMonth.toString().padStart(2, "0")}-01`;
+    const { year: periodYear, month: periodMonth, ymd: todayStr, issueDateYmd: issueDateStr } =
+        getSaasCalendarParts();
 
     const connection = await db.getConnection();
 
     try {
         await connection.beginTransaction();
 
-        // 1. Obtener todas las suscripciones activas
         const [subscriptions] = await connection.query(
-            "SELECT admin_id, fee_amount, currency, due_days FROM saas_subscriptions WHERE status = 'ACTIVE' AND fee_amount > 0",
+            `SELECT sub.admin_id, sub.fee_amount, sub.currency, sub.due_days
+             FROM saas_subscriptions sub
+             INNER JOIN users u ON u.id = sub.admin_id
+             WHERE sub.status = 'ACTIVE'
+               AND sub.fee_amount > 0
+               AND u.status = 'ACTIVE'`,
         );
 
         if (subscriptions.length === 0) {
@@ -373,16 +510,12 @@ const generateMonthlyInvoices = async (req, res) => {
             );
 
             if (existingInvoice.length === 0) {
-                // 3. Calcular la fecha de vencimiento (dueDate) sumando los due_days a la issue_date
-                // Ej: Si issueDate es 2026-08-01 y due_days es 5, dueDate será 2026-08-06
-                const dueDateObj = new Date(
-                    currentDate.getFullYear(),
-                    currentDate.getMonth(),
-                    1 + sub.due_days,
+                const dueDateStr = saasDueDateYmd(
+                    periodYear,
+                    periodMonth,
+                    sub.due_days,
                 );
-                const dueDateStr = dueDateObj.toISOString().split("T")[0];
 
-                // 4. Insertar la nueva factura
                 await connection.query(
                     `INSERT INTO saas_invoices 
                     (admin_id, period_month, period_year, fee_amount, currency, exchange_rate, issue_date, due_date, status) 
@@ -402,9 +535,6 @@ const generateMonthlyInvoices = async (req, res) => {
             }
         }
 
-        // 5. Proceso de actualización de MOROSIDAD automática
-        // Si hay facturas PENDING cuya fecha de vencimiento (due_date) ya pasó, las pasamos a OVERDUE
-        const todayStr = currentDate.toISOString().split("T")[0];
         const [updateResult] = await connection.query(
             "UPDATE saas_invoices SET status = 'OVERDUE' WHERE status = 'PENDING' AND due_date < ?",
             [todayStr],
@@ -431,6 +561,7 @@ module.exports = {
     getSaaSDashboard,
     updateSubscription,
     registerPayment,
+    getAdminInvoices,
     getPaymentHistory,
     getAllPaymentHistory,
     generateMonthlyInvoices,

@@ -16,6 +16,10 @@
         {
             "path": "/api/tasa/cron/update-tasa",
             "schedule": "0 23 * * *"
-        }
+        },
+         {
+             "path": "/api/saas/cron/generate-invoices",
+             "schedule": "30 6 * * *"
+         }
     ]
 }
