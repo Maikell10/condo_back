@@ -46,7 +46,7 @@ const getSaaSDashboard = async (req, res) => {
                 (SELECT payment_date FROM saas_payments p WHERE p.invoice_id = i.id ORDER BY payment_date DESC LIMIT 1) as paymentDate
 
             FROM saas_subscriptions sub
-            INNER JOIN users u ON u.id = sub.admin_id AND u.role = 'BUILDING_ADMIN'
+            INNER JOIN users u ON u.id = sub.admin_id
             LEFT JOIN saas_invoices i ON u.id = i.admin_id 
                 AND i.period_month = MONTH(CURRENT_DATE()) 
                 AND i.period_year = YEAR(CURRENT_DATE())
@@ -58,14 +58,19 @@ const getSaaSDashboard = async (req, res) => {
         // Formateamos los datos para que Angular (Frontend) los reciba exactamente como en los Mocks
         const formattedData = rows.map((admin) => {
             const isComplex = admin.complex_count > 0;
+            const isTest = isTestSaasAccount(admin.email);
+            const accountStatus = admin.account_status || "ACTIVE";
+            const includeInMetrics =
+                accountStatus === "ACTIVE" && !isTest;
 
             return {
                 id: admin.admin_id,
                 name: admin.name,
                 email: admin.email,
-                accountStatus: admin.account_status || "ACTIVE",
+                accountStatus,
                 subscriptionStatus: admin.subscription_status || "ACTIVE",
-                isTestAccount: isTestSaasAccount(admin.email),
+                isTestAccount: isTest,
+                includeInMetrics,
                 scope: isComplex ? "COMPLEX" : "SINGLE",
                 scopeName: isComplex
                     ? `${admin.complex_name} (${admin.building_count} Edificios)`
