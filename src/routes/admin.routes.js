@@ -9,6 +9,12 @@ router.get(
     authMiddleware.isSuperAdmin,
     adminController.getAllUsers,
 );
+router.get(
+    "/users/:id",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.getUserById,
+);
 router.post(
     "/users",
     authMiddleware.verifyToken,

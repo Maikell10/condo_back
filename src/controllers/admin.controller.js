@@ -4,6 +4,20 @@ const csv = require("csv-parser");
 const crypto = require("crypto");
 const fs = require("fs");
 
+const PLACEHOLDER_EMAIL_RE = /^sin-correo-.+@condominio\.local$/i;
+
+const normalizeOptionalText = (value) => {
+    if (value == null) return null;
+    const trimmed = String(value).trim();
+    return trimmed === "" ? null : trimmed;
+};
+
+const resolveOwnerEmailForCreate = (email) => {
+    const clean = normalizeOptionalText(email);
+    if (clean) return clean;
+    return `sin-correo-${Date.now()}-${Math.floor(Math.random() * 10000)}@condominio.local`;
+};
+
 const USER_SCOPE_SQL = `
     CASE
         WHEN u.role = 'BUILDING_ADMIN' THEN COALESCE(
@@ -38,9 +52,11 @@ const buildUsersListFilters = (query) => {
         params.push(role);
     }
     if (search) {
-        conditions.push("(u.name LIKE ? OR u.email LIKE ?)");
+        conditions.push(
+            "(u.name LIKE ? OR u.email LIKE ? OR u.cedula LIKE ? OR u.phone LIKE ?)",
+        );
         const term = `%${search}%`;
-        params.push(term, term);
+        params.push(term, term, term, term);
     }
 
     return { where: conditions.join(" AND "), params };
@@ -81,9 +97,19 @@ const getAllUsers = async (req, res) => {
                 u.id,
                 u.name,
                 u.email,
+                u.cedula,
+                u.phone,
                 u.role,
                 u.status,
-                ${USER_SCOPE_SQL} AS buildingName
+                ${USER_SCOPE_SQL} AS buildingName,
+                (SELECT COUNT(*) FROM apartments ap WHERE ap.owner_id = u.id) AS apartmentCount,
+                (SELECT GROUP_CONCAT(
+                    DISTINCT CONCAT(b.name, ' · ', ap.number)
+                    ORDER BY b.name, ap.number SEPARATOR ' | '
+                 )
+                 FROM apartments ap
+                 INNER JOIN buildings b ON b.id = ap.building_id
+                 WHERE ap.owner_id = u.id) AS ownedUnitsSummary
              FROM users u
              WHERE ${where}
              ORDER BY u.id DESC
@@ -112,6 +138,12 @@ const getAllUsers = async (req, res) => {
         });
     } catch (error) {
         console.error("getAllUsers:", error);
+        if (error.code === "ER_BAD_FIELD_ERROR") {
+            return res.status(503).json({
+                message:
+                    "Faltan columnas de perfil (cedula/phone). Ejecuta scripts/add-users-profile-columns.sql en MySQL.",
+            });
+        }
         res.status(500).json({
             message: "Error al obtener usuarios",
         });
@@ -133,24 +165,93 @@ const toggleUserStatus = async (req, res) => {
     }
 };
 
-const createUser = async (req, res) => {
-    const { name, email, password, role } = req.body;
+const getUserById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [[user]] = await db.query(
+            `SELECT
+                u.id,
+                u.name,
+                u.email,
+                u.cedula,
+                u.phone,
+                u.role,
+                u.status,
+                ${USER_SCOPE_SQL} AS buildingName
+             FROM users u
+             WHERE u.id = ?`,
+            [id],
+        );
 
-    if (!name || !email || !password || !role) {
-        return res
-            .status(400)
-            .json({ message: "Todos los campos son obligatorios" });
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        const [ownedApartments] = await db.query(
+            `SELECT
+                a.id,
+                a.number,
+                b.name AS buildingName,
+                b.code AS buildingCode
+             FROM apartments a
+             INNER JOIN buildings b ON b.id = a.building_id
+             WHERE a.owner_id = ?
+             ORDER BY b.name ASC, a.number ASC`,
+            [id],
+        );
+
+        res.json({
+            data: {
+                ...user,
+                apartmentCount: ownedApartments.length,
+                ownedApartments,
+            },
+        });
+    } catch (error) {
+        console.error("getUserById:", error);
+        if (error.code === "ER_BAD_FIELD_ERROR") {
+            return res.status(503).json({
+                message:
+                    "Faltan columnas de perfil (cedula/phone). Ejecuta scripts/add-users-profile-columns.sql en MySQL.",
+            });
+        }
+        res.status(500).json({ message: "Error al obtener el usuario" });
     }
+};
+
+const createUser = async (req, res) => {
+    const { name, password, role } = req.body;
+    const email = normalizeOptionalText(req.body.email);
+    const cedula = normalizeOptionalText(req.body.cedula);
+    const phone = normalizeOptionalText(req.body.phone);
+
+    if (!name || !password || !role) {
+        return res.status(400).json({
+            message: "Nombre, contraseña y rol son obligatorios",
+        });
+    }
+
+    const needsEmail = role === "SUPER_ADMIN" || role === "BUILDING_ADMIN";
+    if (needsEmail && !email) {
+        return res.status(400).json({
+            message: "El correo es obligatorio para administradores",
+        });
+    }
+
+    const emailToStore =
+        role === "OWNER" ? resolveOwnerEmailForCreate(email) : email;
 
     try {
         // Encriptar la contraseña
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const query = `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`;
-        const [result] = await db.query(query, [
+        const query = `INSERT INTO users (name, cedula, email, phone, password, role) VALUES (?, ?, ?, ?, ?, ?)`;
+        await db.query(query, [
             name,
-            email,
+            cedula,
+            emailToStore,
+            phone,
             hashedPassword,
             role,
         ]);
@@ -169,17 +270,54 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const { name, email, role } = req.body; // No recibimos password aquí por seguridad
+    const { name, role } = req.body;
+    const emailInput = normalizeOptionalText(req.body.email);
+    const cedula = normalizeOptionalText(req.body.cedula);
+    const phone = normalizeOptionalText(req.body.phone);
 
-    if (!name || !email || !role) {
-        return res
-            .status(400)
-            .json({ message: "Nombre, email y rol son obligatorios" });
+    if (!name || !role) {
+        return res.status(400).json({ message: "Nombre y rol son obligatorios" });
+    }
+
+    const needsEmail = role === "SUPER_ADMIN" || role === "BUILDING_ADMIN";
+    if (needsEmail && !emailInput) {
+        return res.status(400).json({
+            message: "El correo es obligatorio para administradores",
+        });
     }
 
     try {
-        const query = `UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?`;
-        const [result] = await db.query(query, [name, email, role, id]);
+        const [[existing]] = await db.query(
+            "SELECT email FROM users WHERE id = ?",
+            [id],
+        );
+        if (!existing) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        let emailToStore = existing.email;
+        if (needsEmail) {
+            emailToStore = emailInput;
+        } else if (role === "OWNER") {
+            if (emailInput) {
+                emailToStore = emailInput;
+            } else if (
+                !existing.email ||
+                PLACEHOLDER_EMAIL_RE.test(existing.email)
+            ) {
+                emailToStore = resolveOwnerEmailForCreate(null);
+            }
+        }
+
+        const query = `UPDATE users SET name = ?, cedula = ?, email = ?, phone = ?, role = ? WHERE id = ?`;
+        const [result] = await db.query(query, [
+            name,
+            cedula,
+            emailToStore,
+            phone,
+            role,
+            id,
+        ]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Usuario no encontrado" });
@@ -739,6 +877,7 @@ async function processRows(rows) {
 
 module.exports = {
     getAllUsers,
+    getUserById,
     toggleUserStatus,
     createUser,
     updateUser,
