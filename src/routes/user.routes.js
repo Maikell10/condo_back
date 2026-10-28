@@ -12,4 +12,11 @@ router.get(
     userController.searchUsers,
 );
 
+router.put(
+    "/owners/:ownerId/profile",
+    authMiddleware.verifyToken,
+    authMiddleware.isBuildingAdmin,
+    userController.updateOwnerProfileByBuildingAdmin,
+);
+
 module.exports = router;

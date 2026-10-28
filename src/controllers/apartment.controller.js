@@ -7,17 +7,17 @@ const getApartmentsByBuilding = async (req, res) => {
         const query = `
             SELECT 
                 a.id, 
-                a.number, 
+                a.number,
+                a.owner_id AS ownerId,
                 u.name as ownerName, 
                 a.alicuota,
                 a.access_code,
-                -- 🔥 CORRECCIÓN: Incluimos 'PARTIAL' (Abonos) y blindamos 'paid' por si viene nulo
                 COALESCE(SUM(CASE WHEN r.status IN ('PENDING', 'PARTIAL') THEN (r.amount - COALESCE(r.paid, 0)) ELSE 0 END), 0) as balance
             FROM apartments a
             LEFT JOIN users u ON a.owner_id = u.id
             LEFT JOIN receipts r ON a.id = r.apartment_id
             WHERE a.building_id = ?
-            GROUP BY a.id, a.number, u.name, a.alicuota, a.access_code
+            GROUP BY a.id, a.number, a.owner_id, u.name, a.alicuota, a.access_code
         `;
 
         const [apartments] = await db.query(query, [buildingId]);

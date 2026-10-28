@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const apartmentController = require("../controllers/apartment.controller");
+const userController = require("../controllers/user.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
 router.get(
@@ -29,6 +30,11 @@ router.patch("/:id/alicuota", apartmentController.updateAlicuota);
 
 // Vincular un propietario (User ID) a un apartamento
 router.patch("/:id/owner", apartmentController.linkOwner);
+
+router.get(
+    "/:apartmentId/owner-edit-context",
+    userController.getOwnerEditContextByApartment,
+);
 
 // POST /api/apartments
 router.post(
