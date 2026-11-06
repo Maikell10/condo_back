@@ -84,15 +84,22 @@ const buildUsersListFilters = (query) => {
 
     const status = query.status || "ALL";
     const role = query.role || "ALL";
+    const ownerUnits = query.ownerUnits || "ALL";
     const search = query.search ? String(query.search).trim() : "";
+
+    if (ownerUnits === "NONE") {
+        conditions.push("u.role = 'OWNER'");
+        conditions.push(
+            "NOT EXISTS (SELECT 1 FROM apartments a WHERE a.owner_id = u.id)",
+        );
+    } else if (role !== "ALL") {
+        conditions.push("u.role = ?");
+        params.push(role);
+    }
 
     if (status !== "ALL") {
         conditions.push("u.status = ?");
         params.push(status);
-    }
-    if (role !== "ALL") {
-        conditions.push("u.role = ?");
-        params.push(role);
     }
     if (search) {
         conditions.push(
