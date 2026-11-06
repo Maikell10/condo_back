@@ -13,9 +13,6 @@ const {
 
 const PLACEHOLDER_EMAIL_RE = /^sin-correo-.+@condominio\.local$/i;
 
-const resolveOwnerEmailForCreate = () =>
-    `sin-correo-${Date.now()}-${Math.floor(Math.random() * 10000)}@condominio.local`;
-
 const OWNER_PROFILE_FIELDS = `
     u.id,
     u.name,
@@ -33,11 +30,12 @@ const searchUsers = async (req, res) => {
         const query = `
             SELECT id, name, email 
             FROM users 
-            WHERE (name LIKE ? OR email LIKE ?) 
-            AND role = 'OWNER'
+            WHERE role = 'OWNER'
+            AND (name LIKE ? OR IFNULL(email, '') LIKE ?)
             LIMIT 10
         `;
-        const [users] = await db.query(query, [`%${term}%`, `%${term}%`]);
+        const like = `%${term}%`;
+        const [users] = await db.query(query, [like, like]);
         res.json({ data: users });
     } catch (error) {
         res.status(500).json({ message: "Error al buscar usuarios" });
@@ -140,14 +138,13 @@ const updateOwnerProfileByBuildingAdmin = async (req, res) => {
             return res.status(404).json({ message: "Propietario no encontrado" });
         }
 
-        let emailToStore = existing.email;
-        if (emailInput) {
-            emailToStore = emailInput;
-        } else if (
-            !existing.email ||
-            PLACEHOLDER_EMAIL_RE.test(existing.email)
+        let emailToStore =
+            emailInput !== undefined ? emailInput : existing.email;
+        if (
+            emailToStore &&
+            PLACEHOLDER_EMAIL_RE.test(String(emailToStore))
         ) {
-            emailToStore = resolveOwnerEmailForCreate();
+            emailToStore = null;
         }
 
         await db.query(

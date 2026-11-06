@@ -55,11 +55,8 @@ const normalizeBirthDate = (value) => {
     return d;
 };
 
-const resolveOwnerEmailForCreate = (email) => {
-    const clean = normalizeOptionalText(email);
-    if (clean) return clean;
-    return `sin-correo-${Date.now()}-${Math.floor(Math.random() * 10000)}@condominio.local`;
-};
+/** Email para OWNER: valor limpio o NULL (no se inventan direcciones). */
+const resolveOwnerEmailForCreate = (email) => normalizeOptionalText(email);
 
 const USER_SCOPE_SQL = `
     CASE
@@ -359,13 +356,13 @@ const updateUser = async (req, res) => {
         if (needsEmail) {
             emailToStore = emailInput;
         } else if (role === "OWNER") {
-            if (emailInput) {
-                emailToStore = emailInput;
-            } else if (
-                !existing.email ||
+            emailToStore = emailInput;
+            if (
+                emailToStore == null &&
+                existing.email &&
                 PLACEHOLDER_EMAIL_RE.test(existing.email)
             ) {
-                emailToStore = resolveOwnerEmailForCreate(null);
+                emailToStore = null;
             }
         }
 
@@ -835,37 +832,11 @@ async function processRows(rows) {
 
             // Si no se encontró el usuario, o si no tenía correo en el CSV, creamos uno nuevo
             if (!userId) {
-                // Si venía vacío, inventamos un correo temporal para evitar el error de "Duplicate Entry" en MySQL
-                if (cleanEmail === "") {
-                    // Ej: sin-correo-1-101@condominio.local
-                    cleanEmail = `sin-correo-${building_id}-${number}@condominio.local`;
-                }
+                const emailForInsert = cleanEmail === "" ? null : cleanEmail;
 
                 const [userResult] = await db.query(
                     'INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, "ACTIVE")',
-                    [name_user, cleanEmail, password, role || "OWNER"],
-                );
-                userId = userResult.insertId;
-                console.log(
-                    `[Fila ${i + 1}] Nuevo usuario creado: ${cleanEmail} (ID: ${userId})`,
-                );
-            }
-
-            // Verificar si el email ya existe para evitar errores de duplicidad
-            const [existingUsers] = await db.query(
-                "SELECT id FROM users WHERE email = ?",
-                [cleanEmail],
-            );
-
-            if (existingUsers.length > 0) {
-                userId = existingUsers[0].id;
-                console.log(
-                    `[Fila ${i + 1}] Usuario existente: ${cleanEmail} (ID: ${userId})`,
-                );
-            } else {
-                const [userResult] = await db.query(
-                    'INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, "ACTIVE")',
-                    [name_user, cleanEmail, password, role || "OWNER"],
+                    [name_user, emailForInsert, password, role || "OWNER"],
                 );
                 userId = userResult.insertId;
                 console.log(

@@ -10,12 +10,6 @@ const {
 } = require("../utils/userProfile");
 const { assertApartmentUnassignedInScope } = require("../utils/buildingAdminScope");
 
-const resolveOwnerEmailForCreate = (email) => {
-    const clean = normalizeOptionalText(email);
-    if (clean) return clean;
-    return `sin-correo-${Date.now()}-${Math.floor(Math.random() * 10000)}@condominio.local`;
-};
-
 const getApartmentsByBuilding = async (req, res) => {
     const { buildingId } = req.params;
     try {
@@ -70,15 +64,10 @@ const updateAlicuota = async (req, res) => {
 const createOwnerAndAssignToApartment = async (req, res) => {
     const { apartmentId } = req.params;
     const adminUserId = req.user.id;
-    const { name, password } = req.body;
+    const { name } = req.body;
 
     if (!name?.trim()) {
         return res.status(400).json({ message: "El nombre es obligatorio" });
-    }
-    if (!password || String(password).length < 6) {
-        return res
-            .status(400)
-            .json({ message: "La contraseña temporal debe tener al menos 6 caracteres" });
     }
 
     const emailInput = normalizeOptionalText(req.body.email);
@@ -86,7 +75,7 @@ const createOwnerAndAssignToApartment = async (req, res) => {
     const phone = normalizePhoneVe(req.body.phone);
     const sex = normalizeSex(req.body.sex);
     const birthDate = normalizeBirthDate(req.body.birthDate);
-    const emailToStore = emailInput || resolveOwnerEmailForCreate(null);
+    const emailToStore = emailInput;
 
     const connection = await db.getConnection();
     try {
@@ -102,8 +91,9 @@ const createOwnerAndAssignToApartment = async (req, res) => {
             return res.status(access.status).json({ message: access.message });
         }
 
+        const randomPassword = crypto.randomBytes(24).toString("base64url");
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(String(password), salt);
+        const hashedPassword = await bcrypt.hash(randomPassword, salt);
 
         const [userResult] = await connection.query(
             `INSERT INTO users (name, cedula, email, phone, sex, birth_date, password, role, status)
