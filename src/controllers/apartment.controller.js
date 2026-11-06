@@ -1,5 +1,20 @@
 const db = require("../db");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const {
+    normalizeOptionalText,
+    normalizeCedula,
+    normalizePhoneVe,
+    normalizeSex,
+    normalizeBirthDate,
+} = require("../utils/userProfile");
+const { assertApartmentUnassignedInScope } = require("../utils/buildingAdminScope");
+
+const resolveOwnerEmailForCreate = (email) => {
+    const clean = normalizeOptionalText(email);
+    if (clean) return clean;
+    return `sin-correo-${Date.now()}-${Math.floor(Math.random() * 10000)}@condominio.local`;
+};
 
 const getApartmentsByBuilding = async (req, res) => {
     const { buildingId } = req.params;
@@ -49,19 +64,98 @@ const updateAlicuota = async (req, res) => {
     }
 };
 
-const linkOwner = async (req, res) => {
-    const { id } = req.params; // ID del apartamento
-    const { userId } = req.body; // ID del usuario seleccionado en el modal
+/**
+ * Crea un usuario OWNER y lo asigna al apartamento (solo si está vacío y en alcance del admin).
+ */
+const createOwnerAndAssignToApartment = async (req, res) => {
+    const { apartmentId } = req.params;
+    const adminUserId = req.user.id;
+    const { name, password } = req.body;
 
+    if (!name?.trim()) {
+        return res.status(400).json({ message: "El nombre es obligatorio" });
+    }
+    if (!password || String(password).length < 6) {
+        return res
+            .status(400)
+            .json({ message: "La contraseña temporal debe tener al menos 6 caracteres" });
+    }
+
+    const emailInput = normalizeOptionalText(req.body.email);
+    const cedula = normalizeCedula(req.body.cedula);
+    const phone = normalizePhoneVe(req.body.phone);
+    const sex = normalizeSex(req.body.sex);
+    const birthDate = normalizeBirthDate(req.body.birthDate);
+    const emailToStore = emailInput || resolveOwnerEmailForCreate(null);
+
+    const connection = await db.getConnection();
     try {
-        // Actualizamos el owner_id en la tabla de apartamentos
-        await db.query("UPDATE apartments SET owner_id = ? WHERE id = ?", [
-            userId,
-            id,
-        ]);
-        res.json({ message: "Propietario vinculado exitosamente" });
+        await connection.beginTransaction();
+
+        const access = await assertApartmentUnassignedInScope(
+            adminUserId,
+            Number(apartmentId),
+            connection,
+        );
+        if (!access.ok) {
+            await connection.rollback();
+            return res.status(access.status).json({ message: access.message });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(String(password), salt);
+
+        const [userResult] = await connection.query(
+            `INSERT INTO users (name, cedula, email, phone, sex, birth_date, password, role, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'OWNER', 'ACTIVE')`,
+            [
+                name.trim(),
+                cedula,
+                emailToStore,
+                phone,
+                sex,
+                birthDate,
+                hashedPassword,
+            ],
+        );
+
+        const ownerId = userResult.insertId;
+
+        const [updResult] = await connection.query(
+            `UPDATE apartments SET owner_id = ? WHERE id = ? AND owner_id IS NULL`,
+            [ownerId, apartmentId],
+        );
+
+        if (updResult.affectedRows === 0) {
+            await connection.rollback();
+            return res.status(409).json({
+                message:
+                    "No se pudo asignar la unidad (posiblemente ya tiene propietario). Revisa e intenta de nuevo.",
+            });
+        }
+
+        await connection.commit();
+        res.status(201).json({
+            message: "Propietario creado y unidad asignada correctamente",
+            ownerId,
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error al vincular el propietario" });
+        await connection.rollback();
+        if (error.code === "ER_DUP_ENTRY") {
+            return res.status(400).json({
+                message: "El correo electrónico ya está registrado",
+            });
+        }
+        console.error("createOwnerAndAssignToApartment:", error);
+        if (error.code === "ER_BAD_FIELD_ERROR") {
+            return res.status(503).json({
+                message:
+                    "Faltan columnas de perfil en users. Ejecuta los scripts SQL de perfil en MySQL.",
+            });
+        }
+        res.status(500).json({ message: "Error al crear el propietario" });
+    } finally {
+        connection.release();
     }
 };
 
@@ -289,7 +383,7 @@ const getBuildingAliquots = async (req, res) => {
 module.exports = {
     getApartmentsByBuilding,
     updateAlicuota,
-    linkOwner,
+    createOwnerAndAssignToApartment,
     createApartment,
     getBankAccounts,
     createBankAccount,

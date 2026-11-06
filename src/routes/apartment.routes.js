@@ -28,8 +28,11 @@ router.get(
 // Actualizar la alícuota de un apartamento específico
 router.patch("/:id/alicuota", apartmentController.updateAlicuota);
 
-// Vincular un propietario (User ID) a un apartamento
-router.patch("/:id/owner", apartmentController.linkOwner);
+// Crear propietario nuevo y asignarlo al apartamento (sin propietario)
+router.post(
+    "/:apartmentId/owner",
+    apartmentController.createOwnerAndAssignToApartment,
+);
 
 router.get(
     "/:apartmentId/owner-edit-context",

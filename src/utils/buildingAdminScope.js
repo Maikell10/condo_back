@@ -95,9 +95,45 @@ const assertApartmentManagedByAdmin = async (adminUserId, apartmentId) => {
     return { ok: true, apartment: apt };
 };
 
+/** Apartamento sin propietario y dentro del alcance del building admin. */
+/**
+ * @param {import("mysql2/promise").Pool|import("mysql2/promise").PoolConnection} connOrPool
+ */
+const assertApartmentUnassignedInScope = async (
+    adminUserId,
+    apartmentId,
+    connOrPool = db,
+) => {
+    const scopeIds = new Set(await getManagedBuildingIds(adminUserId));
+    const [[apt]] = await connOrPool.query(
+        `SELECT a.id, a.owner_id AS ownerId, a.building_id AS buildingId, a.number
+         FROM apartments a WHERE a.id = ?`,
+        [apartmentId],
+    );
+    if (!apt) {
+        return { ok: false, status: 404, message: "Apartamento no encontrado" };
+    }
+    if (!scopeIds.has(apt.buildingId)) {
+        return {
+            ok: false,
+            status: 403,
+            message: "No tiene permiso sobre este apartamento.",
+        };
+    }
+    if (apt.ownerId != null) {
+        return {
+            ok: false,
+            status: 400,
+            message: "Esta unidad ya tiene propietario asignado.",
+        };
+    }
+    return { ok: true, apartment: apt };
+};
+
 module.exports = {
     getManagedBuildingIds,
     getOwnerPortfolio,
     evaluateOwnerEditScope,
     assertApartmentManagedByAdmin,
+    assertApartmentUnassignedInScope,
 };
