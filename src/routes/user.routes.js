@@ -12,6 +12,20 @@ router.get(
     userController.searchUsers,
 );
 
+router.get(
+    "/me",
+    authMiddleware.verifyToken,
+    authMiddleware.isOwner,
+    userController.getMyOwnerProfile,
+);
+
+router.put(
+    "/me",
+    authMiddleware.verifyToken,
+    authMiddleware.isOwner,
+    userController.updateMyOwnerProfile,
+);
+
 router.put(
     "/owners/:ownerId/profile",
     authMiddleware.verifyToken,
