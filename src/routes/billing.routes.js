@@ -54,7 +54,7 @@ router.get("/expenses/:buildingId", billingController.getBuildingExpenses);
 router.post("/expenses", billingController.addExpense);
 router.post("/generate", billingController.generateMonthlyBilling);
 
-router.delete("/expenses/:buildingId", billingController.deleteExpense);
+router.delete("/expenses/:id", billingController.deleteExpense);
 
 router.get("/periods/:buildingId", billingController.getClosedPeriods);
 
