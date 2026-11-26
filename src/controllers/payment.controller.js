@@ -99,16 +99,20 @@ const getMyPayments = async (req, res) => {
         SELECT 
             p.id, 
             p.bank_account, 
+            p.operation_type,
             p.reference, 
             p.amount, 
+            p.currency,
+            p.exchange_rate,
+            p.amount_local,
             p.payment_date, 
             p.status,
+            p.created_at,
             a.number as apartment_number
         FROM payments p
         JOIN apartments a ON p.apartment_id = a.id
         WHERE a.owner_id = ?
-        ORDER BY p.created_at DESC 
-        LIMIT 5
+        ORDER BY p.created_at DESC
         `;
         const [payments] = await db.query(query, [userId]);
         res.json({ data: payments });
