@@ -1,10 +1,21 @@
 const db = require("../db");
+const { resolveSettingsAdminId } = require("../utils/mirrorScope");
 
 // Obtener configuraciones del administrador
 const getSettings = async (req, res) => {
-    const adminId = req.user.id;
-
     try {
+        const adminId = await resolveSettingsAdminId(req.user);
+        if (adminId == null) {
+            return res.json({
+                success: true,
+                data: {
+                    has_reserve_fund: 0,
+                    reserve_fund_percentage: 0,
+                    expense_split_mode: "BY_BUILDING",
+                },
+            });
+        }
+
         const [settings] = await db.query(
             "SELECT * FROM admin_settings WHERE admin_id = ?",
             [adminId],

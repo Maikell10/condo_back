@@ -63,7 +63,6 @@ const updateAlicuota = async (req, res) => {
  */
 const createOwnerAndAssignToApartment = async (req, res) => {
     const { apartmentId } = req.params;
-    const adminUserId = req.user.id;
     const { name } = req.body;
 
     if (!name?.trim()) {
@@ -82,7 +81,7 @@ const createOwnerAndAssignToApartment = async (req, res) => {
         await connection.beginTransaction();
 
         const access = await assertApartmentUnassignedInScope(
-            adminUserId,
+            req.user,
             Number(apartmentId),
             connection,
         );

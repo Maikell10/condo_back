@@ -1,5 +1,7 @@
 const db = require("../db");
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const { auditLog } = require("../utils/logger");
 const csv = require("csv-parser");
 const crypto = require("crypto");
 const fs = require("fs");
@@ -908,6 +910,108 @@ async function processRows(rows) {
 //importData();
 //-----------------------------------------------------------------------------
 
+/**
+ * Sesión espejo de solo lectura: el super admin ve el panel del building admin.
+ * POST /api/admin/buildings/:id/mirror-session
+ */
+const startBuildingMirrorSession = async (req, res) => {
+    const buildingId = Number(req.params.id);
+    if (!Number.isFinite(buildingId) || buildingId <= 0) {
+        return res.status(400).json({ message: "ID de edificio inválido" });
+    }
+
+    try {
+        const [rows] = await db.query(
+            `SELECT b.id, b.name, b.code, b.status, b.complex_id, b.admin_id,
+                    u.name AS superName, u.email AS superEmail
+             FROM buildings b
+             CROSS JOIN users u
+             WHERE b.id = ? AND u.id = ?`,
+            [buildingId, req.user.id],
+        );
+
+        if (!rows.length) {
+            return res.status(404).json({ message: "Edificio no encontrado" });
+        }
+
+        const building = rows[0];
+        if (building.status !== "ACTIVE") {
+            return res.status(400).json({
+                message:
+                    "Solo se puede abrir vista espejo en edificios activos.",
+            });
+        }
+
+        let complexId;
+        if (building.complex_id) {
+            const [[countRow]] = await db.query(
+                `SELECT COUNT(*) AS c FROM buildings
+                 WHERE complex_id = ? AND status = 'ACTIVE'`,
+                [building.complex_id],
+            );
+            if (Number(countRow.c) > 1) {
+                complexId = building.complex_id;
+            }
+        }
+
+        const tokenPayload = {
+            id: req.user.id,
+            role: "BUILDING_ADMIN",
+            impersonating: true,
+            readOnlyMirror: true,
+            realRole: "SUPER_ADMIN",
+            buildingId: building.id,
+        };
+        if (complexId) {
+            tokenPayload.complexId = complexId;
+        }
+
+        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+            expiresIn: "4h",
+        });
+
+        await auditLog(
+            req.user.id,
+            "MIRROR_BUILDING_READ",
+            "ADMIN",
+            {
+                buildingId: building.id,
+                buildingCode: building.code,
+                buildingName: building.name,
+                complexId: complexId ?? null,
+            },
+            req,
+        );
+
+        const user = {
+            id: String(req.user.id),
+            name: building.superName,
+            email: building.superEmail,
+            role: "BUILDING_ADMIN",
+            buildingId: String(building.id),
+            impersonating: true,
+            readOnlyMirror: true,
+            realRole: "SUPER_ADMIN",
+            mirrorBuildingName: building.name,
+            mirrorBuildingCode: building.code,
+        };
+        if (complexId) {
+            user.complexId = complexId;
+        }
+
+        res.json({
+            message: "Vista espejo iniciada (solo lectura)",
+            token,
+            user,
+        });
+    } catch (error) {
+        console.error("startBuildingMirrorSession:", error);
+        res.status(500).json({
+            message: "No se pudo iniciar la vista espejo",
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     getUserById,
@@ -921,4 +1025,5 @@ module.exports = {
     updateBuilding,
     assignBuildingAdmin,
     getDashboardStats,
+    startBuildingMirrorSession,
 };

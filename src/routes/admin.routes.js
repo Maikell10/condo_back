@@ -80,4 +80,11 @@ router.get(
     adminController.getDashboardStats,
 );
 
+router.post(
+    "/buildings/:id/mirror-session",
+    authMiddleware.verifyToken,
+    authMiddleware.isSuperAdmin,
+    adminController.startBuildingMirrorSession,
+);
+
 module.exports = router;

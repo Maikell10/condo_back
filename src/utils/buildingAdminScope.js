@@ -1,14 +1,8 @@
 const db = require("../db");
+const { resolveManagedBuildingIds } = require("./mirrorScope");
 
-const getManagedBuildingIds = async (adminUserId) => {
-    const [rows] = await db.query(
-        `SELECT DISTINCT b.id
-         FROM buildings b
-         LEFT JOIN residential_complexes rc ON b.complex_id = rc.id
-         WHERE (b.admin_id = ? OR rc.admin_id = ?) AND b.status = 'ACTIVE'`,
-        [adminUserId, adminUserId],
-    );
-    return rows.map((r) => r.id);
+const getManagedBuildingIds = async (tokenUser) => {
+    return resolveManagedBuildingIds(tokenUser);
 };
 
 const getOwnerPortfolio = async (ownerId) => {
@@ -31,8 +25,8 @@ const getOwnerPortfolio = async (ownerId) => {
  * Puede editar perfil del propietario si TODAS sus unidades están en edificios
  * que administra este building admin (edificio directo o conjunto completo).
  */
-const evaluateOwnerEditScope = async (adminUserId, ownerId) => {
-    const scopeIds = new Set(await getManagedBuildingIds(adminUserId));
+const evaluateOwnerEditScope = async (tokenUser, ownerId) => {
+    const scopeIds = new Set(await getManagedBuildingIds(tokenUser));
     const portfolio = await getOwnerPortfolio(ownerId);
 
     if (!portfolio.length) {
@@ -68,8 +62,8 @@ const evaluateOwnerEditScope = async (adminUserId, ownerId) => {
     };
 };
 
-const assertApartmentManagedByAdmin = async (adminUserId, apartmentId) => {
-    const scopeIds = new Set(await getManagedBuildingIds(adminUserId));
+const assertApartmentManagedByAdmin = async (tokenUser, apartmentId) => {
+    const scopeIds = new Set(await getManagedBuildingIds(tokenUser));
     const [[apt]] = await db.query(
         `SELECT a.id, a.owner_id AS ownerId, a.building_id AS buildingId, a.number
          FROM apartments a WHERE a.id = ?`,
@@ -100,11 +94,11 @@ const assertApartmentManagedByAdmin = async (adminUserId, apartmentId) => {
  * @param {import("mysql2/promise").Pool|import("mysql2/promise").PoolConnection} connOrPool
  */
 const assertApartmentUnassignedInScope = async (
-    adminUserId,
+    tokenUser,
     apartmentId,
     connOrPool = db,
 ) => {
-    const scopeIds = new Set(await getManagedBuildingIds(adminUserId));
+    const scopeIds = new Set(await getManagedBuildingIds(tokenUser));
     const [[apt]] = await connOrPool.query(
         `SELECT a.id, a.owner_id AS ownerId, a.building_id AS buildingId, a.number
          FROM apartments a WHERE a.id = ?`,

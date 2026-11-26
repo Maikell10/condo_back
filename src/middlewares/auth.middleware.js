@@ -24,6 +24,17 @@ const verifyToken = (req, res, next) => {
         // Guardamos los datos del usuario (id y role) en la request para que el controlador los use
         req.user = decoded;
 
+        if (
+            decoded.impersonating &&
+            decoded.readOnlyMirror &&
+            ["POST", "PUT", "PATCH", "DELETE"].includes(req.method.toUpperCase())
+        ) {
+            return res.status(403).json({
+                message:
+                    "Modo espejo de solo lectura: no se permiten cambios en el sistema.",
+            });
+        }
+
         // Pasamos al siguiente paso (el controlador)
         next();
     } catch (error) {

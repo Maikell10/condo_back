@@ -4,19 +4,37 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { Readable } = require("stream");
 
+const { isReadOnlyMirror } = require("../utils/mirrorScope");
+
 const getBuildingsByComplex = async (req, res) => {
-    // Tomamos el ID del admin desde el token que ya pasó por el middleware
     const adminId = req.user.id;
 
     try {
-        // Reutilizamos la lógica infalible: Traer edificios suyos o de su conjunto
-        const [buildings] = await db.query(
-            `SELECT b.id, b.name, b.code
+        let buildings;
+        if (isReadOnlyMirror(req.user)) {
+            if (req.user.complexId) {
+                [buildings] = await db.query(
+                    `SELECT id, name, code FROM buildings
+                     WHERE complex_id = ? AND status = 'ACTIVE'
+                     ORDER BY name ASC`,
+                    [req.user.complexId],
+                );
+            } else {
+                [buildings] = await db.query(
+                    `SELECT id, name, code FROM buildings
+                     WHERE id = ? AND status = 'ACTIVE'`,
+                    [req.user.buildingId],
+                );
+            }
+        } else {
+            [buildings] = await db.query(
+                `SELECT b.id, b.name, b.code
              FROM buildings b 
              LEFT JOIN residential_complexes rc ON b.complex_id = rc.id 
              WHERE (b.admin_id = ? OR rc.admin_id = ?) AND b.status = 'ACTIVE'`,
-            [adminId, adminId],
-        );
+                [adminId, adminId],
+            );
+        }
 
         res.json({
             message: "Edificios recuperados exitosamente",
@@ -32,6 +50,25 @@ const getComplexInfo = async (req, res) => {
     const adminId = req.user.id;
 
     try {
+        if (isReadOnlyMirror(req.user)) {
+            if (req.user.complexId) {
+                const [rows] = await db.query(
+                    `SELECT rc.id, rc.name, rc.direccion
+                     FROM residential_complexes rc WHERE rc.id = ? LIMIT 1`,
+                    [req.user.complexId],
+                );
+                return res.json({ data: rows[0] || { id: null, name: "", direccion: "" } });
+            }
+            const [standalone] = await db.query(
+                `SELECT NULL AS id, name, address AS direccion
+                 FROM buildings WHERE id = ? LIMIT 1`,
+                [req.user.buildingId],
+            );
+            return res.json({
+                data: standalone[0] || { id: null, name: "", direccion: "" },
+            });
+        }
+
         const [asComplexAdmin] = await db.query(
             `SELECT rc.id, rc.name, rc.direccion
              FROM residential_complexes rc

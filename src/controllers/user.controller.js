@@ -44,11 +44,10 @@ const searchUsers = async (req, res) => {
 
 const getOwnerEditContextByApartment = async (req, res) => {
     const { apartmentId } = req.params;
-    const adminUserId = req.user.id;
 
     try {
         const access = await assertApartmentManagedByAdmin(
-            adminUserId,
+            req.user,
             Number(apartmentId),
         );
         if (!access.ok) {
@@ -56,7 +55,7 @@ const getOwnerEditContextByApartment = async (req, res) => {
         }
 
         const ownerId = access.apartment.ownerId;
-        const scope = await evaluateOwnerEditScope(adminUserId, ownerId);
+        const scope = await evaluateOwnerEditScope(req.user, ownerId);
 
         const base = {
             apartmentId: access.apartment.id,
@@ -196,11 +195,10 @@ const updateMyOwnerProfile = async (req, res) => {
 
 const updateOwnerProfileByBuildingAdmin = async (req, res) => {
     const { ownerId } = req.params;
-    const adminUserId = req.user.id;
 
     try {
         const scope = await evaluateOwnerEditScope(
-            adminUserId,
+            req.user,
             Number(ownerId),
         );
         if (!scope.canEdit) {

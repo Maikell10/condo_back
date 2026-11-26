@@ -1,4 +1,5 @@
 const db = require("../db");
+const { isReadOnlyMirror, resolveManagedBuildingIds } = require("../utils/mirrorScope");
 
 const reportPayment = async (req, res) => {
     const {
@@ -120,7 +121,39 @@ const getMyPayments = async (req, res) => {
 const getBuildingPayments = async (req, res) => {
     const adminId = req.user.id;
     try {
-        const query = `
+        let query;
+        let params;
+        if (isReadOnlyMirror(req.user)) {
+            const buildingIds = await resolveManagedBuildingIds(req.user);
+            if (!buildingIds.length) {
+                return res.json({ data: [] });
+            }
+            const placeholders = buildingIds.map(() => "?").join(", ");
+            query = `
+            SELECT 
+                p.id, 
+                a.number as apartment, 
+                u.name as ownerName, 
+                p.amount, 
+                DATE_FORMAT(p.payment_date, '%Y-%m-%d') as date, 
+                p.status, 
+                p.bank_account as method, 
+                p.reference,
+                b.name as buildingName,
+                p.currency,
+                p.exchange_rate,
+                p.amount_local,
+                p.payment_date
+            FROM payments p
+            JOIN apartments a ON p.apartment_id = a.id
+            JOIN buildings b ON a.building_id = b.id
+            LEFT JOIN users u ON a.owner_id = u.id
+            WHERE b.id IN (${placeholders})
+            ORDER BY p.created_at DESC
+        `;
+            params = buildingIds;
+        } else {
+            query = `
             SELECT 
                 p.id, 
                 a.number as apartment, 
@@ -143,7 +176,9 @@ const getBuildingPayments = async (req, res) => {
             WHERE b.admin_id = ? OR rc.admin_id = ?
             ORDER BY p.created_at DESC
         `;
-        const [payments] = await db.query(query, [adminId, adminId]);
+            params = [adminId, adminId];
+        }
+        const [payments] = await db.query(query, params);
         res.json({ data: payments });
     } catch (error) {
         res.status(500).json({
