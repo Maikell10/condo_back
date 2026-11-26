@@ -53,6 +53,15 @@ router.use(authMiddleware.verifyToken, authMiddleware.isBuildingAdmin);
 router.get("/expenses/:buildingId", billingController.getBuildingExpenses);
 router.post("/expenses", billingController.addExpense);
 router.post("/generate", billingController.generateMonthlyBilling);
+router.post("/generate/batch", billingController.generateMonthlyBillingBatch);
+router.get(
+    "/close-preview/complex/:complexId",
+    billingController.getComplexClosePreview,
+);
+router.get(
+    "/close-preview/:buildingId",
+    billingController.getBuildingClosePreview,
+);
 
 router.delete("/expenses/:id", billingController.deleteExpense);
 

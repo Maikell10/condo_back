@@ -1,5 +1,11 @@
 const db = require("../db");
 const { allocateByWeights } = require("../utils/expense-split");
+const {
+    previewBuildingClose,
+    previewComplexClose,
+    executeBuildingClose,
+    countCloseableInComplex,
+} = require("../utils/billingCloseLogic");
 
 const safeMigration = async (req, res) => {
     const connection = await db.getConnection();
@@ -90,143 +96,105 @@ const generateMonthlyBilling = async (req, res) => {
 
     try {
         await connection.beginTransaction();
-
-        // 1. VALIDACIÓN: ¿Ya está cerrado?
-        const [check] = await connection.query(
-            "SELECT id FROM billing_periods WHERE building_id = ? AND month = ? AND year = ?",
-            [buildingId, month, year],
+        const result = await executeBuildingClose(
+            connection,
+            buildingId,
+            month,
+            year,
         );
-        if (check.length > 0)
-            throw new Error(
-                "Este periodo ya ha sido facturado y está cerrado.",
-            );
+        await connection.commit();
+        res.json({
+            message: `¡Cierre exitoso! Se generaron ${result.apartmentCount} recibos por un total de $${result.totalToDistribute.toFixed(2)}.`,
+        });
+    } catch (error) {
+        await connection.rollback();
+        res.status(500).json({ message: error.message });
+    } finally {
+        connection.release();
+    }
+};
 
-        // 2. SUMAR GASTOS VARIABLES (Facturas del mes excluyendo un posible fondo de reserva previo)
-        const [variableSum] = await connection.query(
-            `
-            SELECT COALESCE(SUM(amount), 0) as total 
-            FROM building_expenses 
-            WHERE building_id = ? AND MONTH(expense_date) = ? AND YEAR(expense_date) = ?
-            AND concept_id NOT IN (SELECT id FROM expense_concepts WHERE description = 'Fondo de Reserva')
-        `,
-            [buildingId, month, year],
-        );
+const getBuildingClosePreview = async (req, res) => {
+    const buildingId = Number(req.params.buildingId);
+    const month = Number(req.query.month);
+    const year = Number(req.query.year);
+    if (!buildingId || !month || !year) {
+        return res.status(400).json({ message: "Parámetros incompletos." });
+    }
+    try {
+        const data = await previewBuildingClose(buildingId, month, year);
+        res.json({ data });
+    } catch (error) {
+        console.error("getBuildingClosePreview:", error);
+        res.status(500).json({ message: "Error al preparar la vista previa." });
+    }
+};
 
-        const paddedMonth = month.toString().padStart(2, "0");
-        const firstDayOfMonth = `${year}-${paddedMonth}-01`;
+const getComplexClosePreview = async (req, res) => {
+    const complexId = Number(req.params.complexId);
+    const month = Number(req.query.month);
+    const year = Number(req.query.year);
+    if (!complexId || !month || !year) {
+        return res.status(400).json({ message: "Parámetros incompletos." });
+    }
+    try {
+        const data = await previewComplexClose(complexId, month, year);
+        res.json({ data });
+    } catch (error) {
+        console.error("getComplexClosePreview:", error);
+        res.status(500).json({ message: "Error al preparar la vista previa." });
+    }
+};
 
-        // 3. VALIDAR Y SUMAR CONTRATOS (Gastos fijos activos)
-        const [fixedSum] = await connection.query(
-            `
-            SELECT COALESCE(SUM(monthly_amount), 0) as total 
-            FROM contracts 
-            WHERE building_id = ? 
-            AND is_active = 1 
-            AND start_date <= LAST_DAY(?)
-            AND end_date >= ?
-        `,
-            [buildingId, firstDayOfMonth, firstDayOfMonth],
-        );
+const generateMonthlyBillingBatch = async (req, res) => {
+    const { complexId, month, year } = req.body;
+    const connection = await db.getConnection();
 
-        const subtotalExpenses =
-            Number(variableSum[0].total) + Number(fixedSum[0].total);
+    const succeeded = [];
+    const failed = [];
 
-        if (subtotalExpenses <= 0) {
-            throw new Error(
-                "No hay gastos registrados (facturas o contratos) para cerrar este mes.",
-            );
+    try {
+        const preview = await previewComplexClose(complexId, month, year);
+        const targets = preview.buildings.filter((b) => b.canClose);
+
+        if (targets.length === 0) {
+            return res.status(400).json({
+                message: "No hay edificios listos para cerrar este periodo.",
+            });
         }
 
-        let reserveFundAmount = 0;
-        let totalToDistribute = subtotalExpenses;
-
-        // 🔥 4. LÓGICA DEL FONDO DE RESERVA
-        // Obtenemos el admin_id del edificio para buscar su configuración
-        const [buildingInfo] = await connection.query(
-            "SELECT admin_id FROM buildings WHERE id = ?",
-            [buildingId],
-        );
-
-        if (buildingInfo.length > 0) {
-            const adminId = buildingInfo[0].admin_id;
-
-            const [settings] = await connection.query(
-                "SELECT has_reserve_fund, reserve_fund_percentage FROM admin_settings WHERE admin_id = ?",
-                [adminId],
-            );
-
-            if (settings.length > 0 && settings[0].has_reserve_fund) {
-                const percentage = Number(settings[0].reserve_fund_percentage);
-                reserveFundAmount = (subtotalExpenses * percentage) / 100;
-                totalToDistribute += reserveFundAmount;
-
-                // 4.1 Buscamos o creamos el concepto "Fondo de Reserva"
-                let [concept] = await connection.query(
-                    "SELECT id FROM expense_concepts WHERE description = 'Fondo de Reserva'",
+        for (const target of targets) {
+            try {
+                await connection.beginTransaction();
+                const result = await executeBuildingClose(
+                    connection,
+                    target.buildingId,
+                    month,
+                    year,
                 );
-
-                let conceptId;
-                if (concept.length === 0) {
-                    // Le asignamos un código único "RES_FUND" para identificarlo fácilmente
-                    const [newConcept] = await connection.query(
-                        "INSERT INTO expense_concepts (code, description) VALUES ('RES_FUND', 'Fondo de Reserva')",
-                    );
-                    conceptId = newConcept.insertId;
-                } else {
-                    conceptId = concept[0].id;
-                }
-
-                // 4.2 Insertamos el gasto automático (CORREGIDO: Sin la columna provider)
-                const expenseDate = `${year}-${paddedMonth}-28`;
-                await connection.query(
-                    `
-                    INSERT INTO building_expenses 
-                    (building_id, concept_id, amount, expense_date) 
-                    VALUES (?, ?, ?, ?)
-                    `,
-                    [buildingId, conceptId, reserveFundAmount, expenseDate],
-                );
+                await connection.commit();
+                succeeded.push({
+                    buildingId: target.buildingId,
+                    buildingName: target.buildingName,
+                    message: result.successMessage,
+                });
+            } catch (err) {
+                await connection.rollback();
+                failed.push({
+                    buildingId: target.buildingId,
+                    buildingName: target.buildingName,
+                    message: err.message,
+                });
             }
         }
 
-        // 5. GENERAR RECIBOS POR ALÍCUOTA
-        const [apartments] = await connection.query(
-            "SELECT id, alicuota FROM apartments WHERE building_id = ?",
-            [buildingId],
-        );
+        const msg =
+            succeeded.length === 1
+                ? succeeded[0].message.replace(/^Edificio \d+:/, "Cierre:")
+                : `Cierre en lote: ${succeeded.length} edificio(s) cerrados${failed.length ? `, ${failed.length} con error` : ""}.`;
 
-        const issueDate = `${year}-${paddedMonth}-01`;
-        const description = `Condominio ${month}/${year}`;
-
-        for (const apt of apartments) {
-            const aptAmount = totalToDistribute * Number(apt.alicuota);
-
-            await connection.query(
-                `
-                INSERT INTO receipts (apartment_id, issue_date, amount, paid, status, description)
-                VALUES (?, ?, ?, 0, 'PENDING', ?)
-            `,
-                [apt.id, issueDate, aptAmount, description],
-            );
-        }
-
-        // 6. REGISTRAR EL CIERRE (closed_at explícito: filas viejas a veces quedaban NULL)
-        await connection.query(
-            "INSERT INTO billing_periods (building_id, month, year, closed_at) VALUES (?, ?, ?, NOW())",
-            [buildingId, month, year],
-        );
-
-        await connection.commit();
-
-        // Mensaje de éxito dinámico
-        let successMessage = `¡Cierre exitoso! Se generaron ${apartments.length} recibos por un total de $${totalToDistribute.toFixed(2)}.`;
-        if (reserveFundAmount > 0) {
-            successMessage += ` (Incluye $${reserveFundAmount.toFixed(2)} de Fondo de Reserva).`;
-        }
-
-        res.json({ message: successMessage });
+        res.json({ message: msg, succeeded, failed });
     } catch (error) {
-        await connection.rollback();
         res.status(500).json({ message: error.message });
     } finally {
         connection.release();
@@ -265,22 +233,26 @@ const getBuildingExpenses = async (req, res) => {
             );
 
             const [closedPeriods] = await db.query(
-                `SELECT COUNT(bp.id) as count 
+                `SELECT COUNT(DISTINCT bp.building_id) as count 
                  FROM billing_periods bp
                  JOIN buildings b ON bp.building_id = b.id
-                 WHERE b.complex_id = ? AND bp.month = ? AND bp.year = ? AND bp.status = 'CLOSED'`,
+                 WHERE b.complex_id = ? AND bp.month = ? AND bp.year = ?`,
                 [complexId, month, year],
             );
 
-            // Si la cantidad de edificios del conjunto es igual a la cantidad de periodos cerrados de ese mes
             const isFullyClosed =
                 totalBuildings[0].count > 0 &&
                 totalBuildings[0].count === closedPeriods[0].count;
 
+            const closeableCount = isFullyClosed
+                ? 0
+                : await countCloseableInComplex(complexId, month, year);
+
             res.json({
                 data: expenses,
                 status: isFullyClosed ? "CLOSED" : "OPEN",
-                canClose: false, // Se mantiene en FALSE para obligar a facturar por edificio individualmente
+                canClose: closeableCount > 0,
+                closeableCount,
             });
         } else {
             // 2. VISTA INDIVIDUAL: Lógica original para un solo edificio
@@ -984,6 +956,9 @@ module.exports = {
     getBuildingExpenses,
     addExpense,
     generateMonthlyBilling,
+    generateMonthlyBillingBatch,
+    getBuildingClosePreview,
+    getComplexClosePreview,
     getClosedPeriods,
     deleteExpense,
     getMonthlyReport,
