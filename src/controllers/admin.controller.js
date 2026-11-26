@@ -942,17 +942,8 @@ const startBuildingMirrorSession = async (req, res) => {
             });
         }
 
-        let complexId;
-        if (building.complex_id) {
-            const [[countRow]] = await db.query(
-                `SELECT COUNT(*) AS c FROM buildings
-                 WHERE complex_id = ? AND status = 'ACTIVE'`,
-                [building.complex_id],
-            );
-            if (Number(countRow.c) > 1) {
-                complexId = building.complex_id;
-            }
-        }
+        /** Mismo criterio que el login del admin de conjunto: si tiene conjunto, ve el conjunto completo. */
+        const complexId = building.complex_id ?? null;
 
         const tokenPayload = {
             id: req.user.id,
